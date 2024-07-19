@@ -1,55 +1,10 @@
 #include "parse.h"
 
-typedef enum wordtype {
-    WT_ASCII,
-    WT_OPER,
-    WT_NUM,
-    WT_ETC,
-    WT_QUOTES,
-    WT_PARENTHESIS,
-    WT_NULL
-} wt;
-
-
-typedef struct exp
-{
-    enum {
-        tag_int,
-        tag_str,
-        tag_call,
-        tag_var,
-        tag_unary,
-        tag_binary,
-        tag_numline
-    } tag;  
-    union
-    {
-        int intExp;
-        char* strExp;
-        char * varExp;
-        struct {
-            struct exp* left;
-            struct exp* right;
-            char operator;
-        } binaryExp;
-        struct {
-            struct exp* operand;
-            char operator
-        } unaryExp;
-        struct {
-            char * name;
-            EXP_LIST *  argument;
-        } callExp;
-
-    }oper;
-} AST;
-
-typedef struct exp_list
-{
-    AST * ast;
-    struct exp_list * next;
-} EXP_LIST;
-
+const char* builtins[] = {
+    "LET",
+    "PRINT"
+};
+const int builtins_count = 2;
 
 void TokensToLinePrint(char tokens[20][20]) {
     int i = 0;
@@ -58,25 +13,34 @@ void TokensToLinePrint(char tokens[20][20]) {
     }
 }
 
-static int isPARENTHESIS(char c) {
+bool isCallExp(char * str) {
+    for (int i = 0; i < builtins_count; i++)
+    {
+        if (strcmp(str, builtins[i]) == 0)
+        return true;
+    }
+    return false;
+}
+
+static bool isPARENTHESIS(char c) {
     return (c==0x28 || c==0x29);
 }
 
-static int isQUOTE(char c) {
+static bool isQUOTE(char c) {
     return c == 0x22;
 }
 
-static int isOPER(char c) {
-    return ((c >= 0x2A && c <= 0x2B) || c == 0x2D || c == 0x2F || (c >= 0x3C && c <= 0x3E)) ? 1 : 0;
+static bool isOPER(char c) {
+    return (c >= 0x2A && c <= 0x2B) || c == 0x2D || c == 0x2F || (c >= 0x3C && c <= 0x3E);
 }
 
-static int isNUM(char c) {
-    return (c >= 0x30 && c <= 0x39) ? 1 : 0;
+static bool isNUM(char c) {
+    return c >= 0x30 && c <= 0x39;
 }
 
 
-static int isASCII(char c) {
-    return ((c >=0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A)) ? 1 : 0;
+static bool isASCII(char c) {
+    return (c >=0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A);
 }
 
 FILE * OpenFile(const char *arg) {
@@ -84,7 +48,14 @@ FILE * OpenFile(const char *arg) {
     return f;
 }
 
-void FillTokenArray(FILE * in, char tokens[20][20]) {
+FILE * CreateFile(const char *arg) {
+    FILE * f = fopen(arg, "w");
+    return f;
+}
+
+
+
+int FillTokenArray(FILE * in, char tokens[20][20]) {
     char line[100];
     fgets(line, 100, in);
     char word[20];
@@ -134,7 +105,7 @@ void FillTokenArray(FILE * in, char tokens[20][20]) {
         c++;
         last = type;
     }
-    
+    return j;
 }
 
 AST * MakeBinaryExp(char operator, AST* left, AST* right) {
@@ -172,4 +143,42 @@ AST * MakeStrExp(char* str) {
     node->tag = tag_int;
     node->oper.strExp = str;
     return node;
+}
+AST * MakeNumLineExp(char* str) {
+    AST * node = (AST*) malloc(sizeof(AST));
+    node->tag = tag_numline;
+    node->oper.intExp = atoi(str);
+    return node;
+}
+
+AST * MakeAssignExp(AST* left, AST* right) {
+    AST * node = (AST*)malloc(sizeof(AST));
+    node->tag = tag_assign;
+    node->oper.assignExp.left = left;
+    node->oper.assignExp.right = right;
+    return node;
+}
+EXP_LIST * MakeExpList(char token[20][20], int ind, int end) {
+    if (ind == end) {
+        return NULL;
+    }
+    EXP_LIST * node = (EXP_LIST*)malloc(sizeof(EXP_LIST));
+    node->ast = MakeAST(token, ind,end);
+    node->next = MakeExpList(token, ind + 1, end);
+    return node;
+}
+
+AST * MakeAST(char token[20][20], int lvl, int end) { // lvl starts with 0
+    if (lvl == end) {
+        return NULL;
+    }
+    AST * node;
+    if (lvl == 0) {
+        node = MakeNumLineExp(token[lvl]);
+        node->oper.nulline.next = MakeAST(token, lvl+ 1, end);
+        return node;
+    }
+    if (isCallExp(token[lvl])) {
+    }
+    return NULL;
 }

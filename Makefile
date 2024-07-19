@@ -1,4 +1,4 @@
-
+SRC := $(shell find ./src -name *.c)
 FLAGS := -Wall -g 
 EXEC_NAME := exec
 .PHONY: all
@@ -11,3 +11,6 @@ parse.o: src/parse.c
 
 main.o: src/main.c
 	gcc -c $< $(FLAGS)
+
+clean: 
+	rm -rf *.o exec
