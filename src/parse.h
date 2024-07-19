@@ -6,4 +6,7 @@
 
 void FillTokenArray(FILE * in, char tokens[20][20]);
 FILE * OpenFile(const char* arg);
+unsigned int hash(char*);
+void TokensToLinePrint(char tokens[20][20]);
+
 #endif

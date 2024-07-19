@@ -1,4 +1,5 @@
 #include "parse.h"
+#include "keywords.h"
 
 int main(int argc, char const *argv[])
 {
@@ -10,11 +11,7 @@ int main(int argc, char const *argv[])
     FILE * tar = OpenFile("output.c");
     char tokens[20][20];
     FillTokenArray(src, tokens);
+    TokensToLinePrint(tokens);
 
-    int i = 0;
-    while (tokens[i][0]) {
-        printf("%s\n", tokens[i]);
-        i++;
-    }
     return 0;
 }
