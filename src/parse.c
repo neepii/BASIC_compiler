@@ -1,12 +1,13 @@
 #include "parse.h"
 
+char** tokens = NULL;
 const char* builtins[] = {
     "LET",
     "PRINT"
 };
 const int builtins_count = 2;
 
-void TokensToLinePrint(char tokens[20][20]) {
+void TokensToLinePrint() {
     int i = 0;
     while(tokens[i][0]) {
         printf("%s\n" , tokens[i++]);
@@ -31,7 +32,7 @@ static bool isQUOTE(char c) {
 }
 
 static bool isOPER(char c) {
-    return (c >= 0x2A && c <= 0x2B) || c == 0x2D || c == 0x2F || (c >= 0x3C && c <= 0x3E);
+    return (c >= 0x2A && c <= 0x2D) || c == 0x2F || (c >= 0x3C && c <= 0x3E);
 }
 
 static bool isNUM(char c) {
@@ -39,7 +40,7 @@ static bool isNUM(char c) {
 }
 
 
-static bool isASCII(char c) {
+static bool isCHAR(char c) {
     return (c >=0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A);
 }
 
@@ -53,17 +54,32 @@ FILE * CreateFile(const char *arg) {
     return f;
 }
 
-
-
-int FillTokenArray(FILE * in, char tokens[20][20]) {
-    char line[100];
-    fgets(line, 100, in);
-    char word[20];
-    for (int i = 0; i < 20; i++)
+void freeTokensArr() {
+    for (int i = 0; i < MAX_TOKENS_IN_LINE; i++)
     {
+        free(tokens[i]);
+    }
+    free(tokens);
+}
+
+void allocTokensArr() {
+    tokens = (char **) malloc(sizeof(char*) * MAX_TOKENS_IN_LINE);
+    for (int i = 0; i < MAX_TOKENS_IN_LINE; i++)
+    {
+        tokens[i] = (char*) malloc(sizeof(char) * TOKEN_LEN);
         memset(tokens[i], 0,20);
     }
+}
+
+int FillTokenArray(FILE * in) {
+    if (tokens != NULL) {
+        freeTokensArr();    
+    }
+    allocTokensArr();
     
+    char line[100];
+    fgets(line, 100, in);
+    char word[TOKEN_LEN];
     int c = 0;
     int i = 0;
     int j = 0;
@@ -76,7 +92,7 @@ int FillTokenArray(FILE * in, char tokens[20][20]) {
             continue;
         }
 
-        if (isASCII(line[c])) {
+        if (isCHAR(line[c])) {
             type = WT_ASCII;
         }
         else if (isOPER(line[c])) {
@@ -158,27 +174,31 @@ AST * MakeAssignExp(AST* left, AST* right) {
     node->oper.assignExp.right = right;
     return node;
 }
-EXP_LIST * MakeExpList(char token[20][20], int ind, int end) {
+EXP_LIST * MakeExpList(int ind, int end) {
     if (ind == end) {
         return NULL;
     }
     EXP_LIST * node = (EXP_LIST*)malloc(sizeof(EXP_LIST));
-    node->ast = MakeAST(token, ind,end);
-    node->next = MakeExpList(token, ind + 1, end);
+    node->ast = MakeAST(ind,end);
+    node->next = MakeExpList(ind + 1, end);
     return node;
 }
 
-AST * MakeAST(char token[20][20], int lvl, int end) { // lvl starts with 0
+// make get next token
+
+AST * MakeAST(int lvl, int end) { // lvl starts with 0
     if (lvl == end) {
         return NULL;
     }
     AST * node;
     if (lvl == 0) {
-        node = MakeNumLineExp(token[lvl]);
-        node->oper.nulline.next = MakeAST(token, lvl+ 1, end);
+        node = MakeNumLineExp(tokens[lvl]);
+        node->oper.nulline.next = MakeAST(lvl+ 1, end);
         return node;
     }
-    if (isCallExp(token[lvl])) {
-    }
+    if (isCallExp(tokens[lvl])) {
+        EXP_LIST * args = MakeExpList(lvl + 1, end);
+        node = MakeCallExp(tokens[lvl], args);
+    } else {}
     return NULL;
 }

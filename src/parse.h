@@ -5,6 +5,11 @@
 #include <string.h>
 #include <stdbool.h>
 
+#define MAX_TOKENS_IN_LINE 20
+#define TOKEN_LEN 20
+
+extern char ** tokens;
+
 typedef struct exp AST;
 typedef enum wordtype {
     WT_ASCII,
@@ -22,6 +27,8 @@ typedef struct exp_list
     AST * ast;
     struct exp_list * next;
 } EXP_LIST;
+
+
 
 
 typedef struct exp
@@ -66,17 +73,17 @@ typedef struct exp
     }oper;
 } AST;
 
-int FillTokenArray(FILE * in, char tokens[20][20]);
+int FillTokenArray(FILE * in);
 FILE * OpenFile(const char* arg);
 FILE * CreateFile(const char* arg);
-void TokensToLinePrint(char tokens[20][20]);
+void TokensToLinePrint();
 AST * MakeBinaryExp(char operator, AST* left, AST* right);
 AST * MakeUnaryExp(char operator, AST* operand);
 AST * MakeIntExp(int value);
 AST * MakeStrExp(char* str);
 AST * MakeCallExp(char * name, EXP_LIST* arg);
 AST * MakeAssignExp(AST* left, AST* right);
-EXP_LIST * MakeExpList(char token[20][20], int ind, int end);
-AST * MakeAST(char token[20][20], int lvl, int end);
+EXP_LIST * MakeExpList( int ind, int end);
+AST * MakeAST( int lvl, int end);
 
 #endif
