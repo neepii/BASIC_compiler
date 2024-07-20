@@ -1,19 +1,21 @@
 #include "parse.h"
 
 char** tokens = NULL;
+bool error_detected = false;
 
 const char* builtins[] = {
     "LET",
     "PRINT"
 };
-const char* binOperator[] = {
+const char* Operator[] = {
+    "=",
     "+",
     "-",
     "*",
-    "/"
+    "/",
 };
 const int builtins_count = 2;
-const int bin_exp_count = 4;
+const int bin_exp_count = 5;
 
 int tokInd =0;
 int tokLen = 0;
@@ -43,10 +45,6 @@ static void  recursionPrintAST(AST* ast, int spaces) {
         break;
     case tag_int:
         printf("%d", ast->oper.intExp);
-        break;
-    case tag_call:
-        printf("%s", ast->oper.callExp.name);
-        recursionPrintAST(ast->oper.callExp.argument, spaces);
         break;
     case tag_str:
         printf("%s", ast->oper.strExp);
@@ -88,7 +86,7 @@ bool isINT(char * str) {
 bool isBINEXP(char * str) {
     for (int i = 0; i < bin_exp_count; i++)
     {
-        if (strcmp(str, binOperator[i]) == 0) return true;
+        if (strcmp(str, Operator[i]) == 0) return true;
     }
     return false;
 }
@@ -141,7 +139,6 @@ void freeTokensArr() {
 
 void allocTokensArr() {
     tokens = (char **) malloc(sizeof(char*) * MAX_TOKENS_IN_LINE);
-
     tokInd = 0;
     for (int i = 0; i < MAX_TOKENS_IN_LINE; i++)
     {
@@ -155,36 +152,37 @@ void FillTokenArray(FILE * in) {
         freeTokensArr();    
     }
     allocTokensArr();
-    
-    char line[100];
-    fgets(line, 100, in);
     char word[TOKEN_LEN];
-    int c = 0;
     int i = 0;
     int j = 0;
     wt type;
     wt last = WT_NULL;
     bool inQuotes = false;
+    char cur_char = fgetc(in);
 
-    while (line[c]) {
-        if (line[c] == ' ') {
-            c++;
-            continue;
+    while(cur_char && type != WT_ETC) {
+
+
+        if (cur_char == ' ') {
+            type = WT_SPACE;
         }
-        if (isCHAR(line[c])) {
+        else if (cur_char == '\n') {
+            type = WT_NEWLINE;
+        }
+        else if (isCHAR(cur_char)) {
             type = (inQuotes) ? WT_QUOTES : WT_CHAR;
         }
-        else if (isOPER(line[c])) {
+        else if (isOPER(cur_char)) {
             type = WT_OPER;
         } 
-        else if (isNUM(line[c])) {
+        else if (isNUM(cur_char)) {
             type = WT_NUM;
         }
-        else if (isQUOTE(line[c])) {
+        else if (isQUOTE(cur_char)) {
             type = WT_QUOTES;
             if (!inQuotes) inQuotes = true;
         }
-        else if (isPARENTHESIS(line[c])) {
+        else if (isPARENTHESIS(cur_char)) {
             type = WT_PARENTHESIS;
         }
         else {
@@ -192,59 +190,69 @@ void FillTokenArray(FILE * in) {
         }
 
         if (last != type && last != WT_NULL) {
-
-            strncat(tokens[j], word,i);
+            
+            if (last != WT_SPACE) {
+                strncat(tokens[j], word,i);
+                j++;
+            }
             i=0;
-            j++;
         }
-        word[i] = line[c];
+        word[i] = cur_char;
         i++;
-        c++;
         last = type;
+        cur_char = fgetc(in);
     }
     tokLen = j;
+    printf("%d\n", tokLen);
 }
 
-AST * MakeBinaryExp(char *operator, AST* left, AST* right) {
+AST * MakeStatementExp() {
+    AST * node = (AST*) malloc(sizeof(AST));
+    node->tag = tag_statement;
+    node->oper.statementExp.name = cur_token();
+    return node;
+}
+
+AST * MakeBinaryExp(AST* left, AST* right) {
     AST * node = (AST*) malloc(sizeof(AST));
     node->tag = tag_binary;
     node->oper.binaryExp.left = left;
     node->oper.binaryExp.right = right;
-    node->oper.binaryExp.operator = operator;
+    node->oper.binaryExp.operator = cur_token();
     return node;
 }
 
-AST * MakeUnaryExp(char *operator, AST* operand) {
+AST * MakeUnaryExp(AST * operand) {
     AST * node = (AST*) malloc(sizeof(AST));
     node->tag = tag_unary;
     node->oper.unaryExp.operand = operand;
-    node->oper.unaryExp.operator = operator;
+    node->oper.unaryExp.operator = cur_token();
     return node;
 }
 
-AST * MakeCallExp(char * name) {
+AST * MakeCallExp() {
     AST * node = (AST*) malloc(sizeof(AST));
     node->tag = tag_call;
-    node->oper.callExp.name = name;
+    node->oper.callExp.name = cur_token();
     return node;
 }
-AST * MakeIntExp(char * str) {
-    int value = atoi(str);
+AST * MakeIntExp(){
+    int value = atoi(cur_token());
     AST * node = (AST*) malloc(sizeof(AST));
     node->tag = tag_int;
     node->oper.intExp = value;
     return node;
 }
-AST * MakeStrExp(char* str) {
+AST * MakeStrExp() {
     AST * node = (AST*) malloc(sizeof(AST));
     node->tag = tag_str;
-    node->oper.strExp = str;
+    node->oper.strExp = cur_token();
     return node;
 }
-AST * MakeNumLineExp(char* str) {
+AST * MakeNumLineExp() {
     AST * node = (AST*) malloc(sizeof(AST));
     node->tag = tag_numline;
-    node->oper.intExp = atoi(str);
+    node->oper.intExp = atoi(cur_token());
     return node;
 }
 
@@ -255,53 +263,68 @@ AST * MakeAssignExp(AST* left, AST* right) {
     node->oper.assignExp.right = right;
     return node;
 }
-AST * MakeVarExp(char* str) {
+AST * MakeVarExp() {
     AST * node = (AST*)malloc(sizeof(AST));
     node->tag = tag_var;
-    node->oper.varExp = str;
+    node->oper.varExp = cur_token();
     return node;
 }
 
-// EXP_LIST * MakeExpList() { //linked list
-//     if (tokInd == tokLen) {
-//         return NULL;
-//     }
-//     EXP_LIST * node = (EXP_LIST*)malloc(sizeof(EXP_LIST));
-//     node->ast = MakeAST();
-//     node->next = MakeExpList();
-//     return node;
-// }
 
-
-char * get_next_token() {
-    if (tokInd != tokLen) {
-        return tokens[tokInd++];
-    } else {
-        fprintf(stderr, "ERROR: Token index is out of bounds");
-        return NULL;
-    }
-
-}   
-
-AST *  parse_leaf(){
-    char * next = get_next_token();
-    AST * node; 
-
-    if (isSTRING(next)) node = MakeStrExp(next);
-    else if (isINT(next)) node = MakeIntExp(next);
-    else if (isVAR(next)) node = MakeVarExp(next);
-
-    return node;
-}
-
-AST * parse_single_assign() {
-    AST * left = parse_leaf();
-    char * oper = get_next_token();
-    AST * right = parse_leaf();
-    if (match(oper, "=")) {
-        return MakeAssignExp(left, right);
+AST * parse_expression() { //recursive
+    if (isINT(cur_token())) {
+        if(match(cur_token(), "+")) {
+            return NULL; //WIP
+        }
+        else {
+            return MakeIntExp();
+        }
     }
     return NULL;
+}
+
+void parse_error(char * str) {
+    fprintf(stderr, "syntax error: %s\n", str);
+    error_detected = true;
+}
+
+char * next_token() {
+    return tokens[tokInd+1];
+}
+
+char * cur_token() {
+    return tokens[tokInd];
+}
+
+void get_next_token() {
+    if (tokInd < tokLen) {
+        tokInd++;
+    } else {
+        parse_error("token index is out of bounds");
+    }
+
+}
+
+AST * parse_let_statement() {   
+    get_next_token();
+    AST * node = MakeStatementExp();
+    node->oper.statementExp.name = "LET";
+    get_next_token();
+    node->oper.statementExp.identifier = MakeVarExp();
+    get_next_token();
+    if (match(cur_token(), "=")) {
+        parse_error("no equal sign in let statement");
+    }
+    get_next_token();
+    node->oper.statementExp.value = parse_expression();
+    return node;
+}
+
+AST * parse_numline() {
+    get_next_token();
+    AST * node = MakeNumLineExp(cur_token());
+    node->oper.numline.next = MakeAST();
+    return node;
 }
 
 
@@ -310,39 +333,13 @@ AST * MakeAST() { // lvl starts with 0
     if (tokInd == tokLen) {
         return NULL;
     }
-    AST * node;
-    if (tokInd == 0) {
-        char * next = get_next_token();
-        node = MakeNumLineExp(next);
-        node->oper.numline.next = MakeAST();
-        return node;
+
+    if (tokInd == 0) return parse_numline();
+    
+
+    if (match(cur_token(), "LET")) {
+        return parse_let_statement();
     }
     
-    
-    if (isSTRING(tokens[tokInd])) {
-        char * next = get_next_token();
-        node = MakeStrExp(next);
-        return node;
-    }
-    else if (isINT(tokens[tokInd])) {
-        char * next = get_next_token();
-        node = MakeIntExp(next);
-        return node;
-    }
-    else if (match(tokens[tokInd+1], "=")) {
-        AST * left = parse_leaf();
-        get_next_token();
-        AST * right = parse_leaf();
-        node = MakeAssignExp(left, right);
-        return node;
-        
-    }
-    if (isCallExp(tokens[tokInd])) {
-        char * next = get_next_token();
-        node = MakeCallExp(next);
-        node->oper.callExp.argument = MakeAST();
-        return node;
-    }
-    parse_leaf();
     return NULL;
 }
