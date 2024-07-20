@@ -8,10 +8,10 @@ int main(int argc, char const *argv[])
     }
     FILE * src = OpenFile(argv[1]);
     FILE * tar = CreateFile("output.c");
-    char tokens[20][20];
     int count = FillTokenArray(src);
     TokensToLinePrint();
     printf("%d\n", count);
 
+    freeTokensArr();
     return 0;
 }

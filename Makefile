@@ -1,16 +1,14 @@
-SRC := $(shell find ./src -name *.c)
+SRC := $(shell find src/ -regex ".*\.c")
+OBJ := $(patsubst src/%.c, %.o, $(SRC))
 FLAGS := -Wall -g 
 EXEC_NAME := exec
-.PHONY: all
+.PHONY: $(EXEC_NAME)
 
-$(EXEC_NAME): parse.o main.o
+$(EXEC_NAME): $(OBJ)
 	gcc -o $@ $^ $(FLAGS)
 
-parse.o: src/parse.c
-	gcc -c src/parse.c $(FLAGS)
-
-main.o: src/main.c
-	gcc -c $< $(FLAGS)
+%.o: src/%.c
+	gcc -c $^ $(FLAGS)
 
 clean: 
 	rm -rf *.o exec

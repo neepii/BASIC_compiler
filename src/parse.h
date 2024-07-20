@@ -85,5 +85,8 @@ AST * MakeCallExp(char * name, EXP_LIST* arg);
 AST * MakeAssignExp(AST* left, AST* right);
 EXP_LIST * MakeExpList( int ind, int end);
 AST * MakeAST( int lvl, int end);
+void freeTokensArr();
+void allocTokensArr();
+
 
 #endif
