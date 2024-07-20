@@ -12,21 +12,21 @@ extern char ** tokens;
 
 typedef struct exp AST;
 typedef enum wordtype {
-    WT_ASCII,
+    WT_CHAR,
     WT_OPER,
     WT_NUM,
     WT_ETC,
     WT_QUOTES,
-    WT_PARENTHESIS,
+    WT_PARENTHESIS, //left and right are needede
     WT_NULL
 } wt;
 
 
-typedef struct exp_list
-{
-    AST * ast;
-    struct exp_list * next;
-} EXP_LIST;
+// typedef struct exp_list
+// {
+//     AST * ast;
+//     struct exp_list * next;
+// } EXP_LIST;
 
 
 
@@ -55,38 +55,40 @@ typedef struct exp
         struct {
             int value;
             struct exp * next;
-        } nulline;
+        } numline;
         struct {
             struct exp* left;
             struct exp* right;
-            char operator;
+            char * operator;
         } binaryExp;
         struct {
             struct exp* operand;
-            char operator;
+            char * operator;
         } unaryExp;
         struct {
             char * name;
-            EXP_LIST *  argument;
+            struct exp* argument;
         } callExp;
 
     }oper;
 } AST;
 
-int FillTokenArray(FILE * in);
+
+void FillTokenArray(FILE * in);
 FILE * OpenFile(const char* arg);
 FILE * CreateFile(const char* arg);
 void TokensToLinePrint();
-AST * MakeBinaryExp(char operator, AST* left, AST* right);
-AST * MakeUnaryExp(char operator, AST* operand);
-AST * MakeIntExp(int value);
+AST * MakeBinaryExp(char * operator, AST* left, AST* right);
+AST * MakeUnaryExp(char * operator, AST* operand);
+AST * MakeIntExp(char* str);
 AST * MakeStrExp(char* str);
-AST * MakeCallExp(char * name, EXP_LIST* arg);
+AST * MakeCallExp(char * name);
 AST * MakeAssignExp(AST* left, AST* right);
-EXP_LIST * MakeExpList( int ind, int end);
-AST * MakeAST( int lvl, int end);
+// EXP_LIST * MakeExpList();
+AST * MakeAST();
 void freeTokensArr();
 void allocTokensArr();
-
+char * get_next_token();
+void recursivePrintAST(AST* ast);
 
 #endif

@@ -1,11 +1,60 @@
 #include "parse.h"
 
 char** tokens = NULL;
+
 const char* builtins[] = {
     "LET",
     "PRINT"
 };
+const char* binOperator[] = {
+    "+",
+    "-",
+    "*",
+    "/"
+};
 const int builtins_count = 2;
+const int bin_exp_count = 4;
+
+int tokInd =0;
+int tokLen = 0;
+
+
+static bool isNUM(char c);
+static bool isCHAR(char c);
+
+static void recursionPrintAST(AST* ast, int spaces);
+void recursivePrintAST(AST* ast) {
+    int spaces = 40;
+    recursionPrintAST(ast, spaces);
+}
+
+static void  recursionPrintAST(AST* ast, int spaces) {
+    printf("\n");
+    printf("\x1b[%dC", spaces);
+    switch (ast->tag)
+    {
+    case tag_numline:
+        printf("%d", ast->oper.numline.value);
+        recursionPrintAST(ast->oper.numline.next,spaces);
+        break;
+    case tag_var:
+        printf("%s",ast->oper.varExp);
+        break;
+    case tag_int:
+        printf("%d", ast->oper.intExp);
+        break;
+    case tag_call:
+        printf("%s", ast->oper.callExp.name);
+        recursionPrintAST(ast->oper.callExp.argument, spaces);
+        break;
+    case tag_str:
+        printf("%s", ast->oper.strExp);
+        break;
+    default:
+        break;
+    }
+}
+
 
 void TokensToLinePrint() {
     int i = 0;
@@ -19,6 +68,26 @@ bool isCallExp(char * str) {
     {
         if (strcmp(str, builtins[i]) == 0)
         return true;
+    }
+    return false;
+}
+
+bool isSTRING(char * str) {
+    return str[0] == '"';
+}
+
+bool isVAR(char * str) {
+    return isCHAR(str[0]);
+}
+
+bool isINT(char * str) {
+    return isNUM(str[0]);
+}
+
+bool isBINEXP(char * str) {
+    for (int i = 0; i < bin_exp_count; i++)
+    {
+        if (strcmp(str, binOperator[i]) == 0) return true;
     }
     return false;
 }
@@ -44,6 +113,13 @@ static bool isCHAR(char c) {
     return (c >=0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A);
 }
 
+bool match(char * str1, char* str2) {
+    if (strcmp(str1, str2) == 0) {
+        return true;
+    }
+    return false;
+}
+
 FILE * OpenFile(const char *arg) {
     FILE * f = fopen(arg, "r");
     return f;
@@ -64,14 +140,16 @@ void freeTokensArr() {
 
 void allocTokensArr() {
     tokens = (char **) malloc(sizeof(char*) * MAX_TOKENS_IN_LINE);
+
+    tokInd = 0;
     for (int i = 0; i < MAX_TOKENS_IN_LINE; i++)
     {
-        tokens[i] = (char*) malloc(sizeof(char) * TOKEN_LEN);
+        tokens[i] = (char*) malloc(sizeof(char) * (TOKEN_LEN + 1)); 
         memset(tokens[i], 0,20);
     }
 }
 
-int FillTokenArray(FILE * in) {
+void FillTokenArray(FILE * in) {
     if (tokens != NULL) {
         freeTokensArr();    
     }
@@ -85,15 +163,15 @@ int FillTokenArray(FILE * in) {
     int j = 0;
     wt type;
     wt last = WT_NULL;
+    bool inQuotes = false;
 
     while (line[c]) {
         if (line[c] == ' ') {
             c++;
             continue;
         }
-
         if (isCHAR(line[c])) {
-            type = WT_ASCII;
+            type = (inQuotes) ? WT_QUOTES : WT_CHAR;
         }
         else if (isOPER(line[c])) {
             type = WT_OPER;
@@ -103,15 +181,17 @@ int FillTokenArray(FILE * in) {
         }
         else if (isQUOTE(line[c])) {
             type = WT_QUOTES;
+            if (!inQuotes) inQuotes = true;
         }
         else if (isPARENTHESIS(line[c])) {
-
+            type = WT_PARENTHESIS;
         }
         else {
             type = WT_ETC;
         }
 
         if (last != type && last != WT_NULL) {
+
             strncat(tokens[j], word,i);
             i=0;
             j++;
@@ -121,10 +201,10 @@ int FillTokenArray(FILE * in) {
         c++;
         last = type;
     }
-    return j;
+    tokLen = j;
 }
 
-AST * MakeBinaryExp(char operator, AST* left, AST* right) {
+AST * MakeBinaryExp(char *operator, AST* left, AST* right) {
     AST * node = (AST*) malloc(sizeof(AST));
     node->tag = tag_binary;
     node->oper.binaryExp.left = left;
@@ -133,7 +213,7 @@ AST * MakeBinaryExp(char operator, AST* left, AST* right) {
     return node;
 }
 
-AST * MakeUnaryExp(char operator, AST* operand) {
+AST * MakeUnaryExp(char *operator, AST* operand) {
     AST * node = (AST*) malloc(sizeof(AST));
     node->tag = tag_unary;
     node->oper.unaryExp.operand = operand;
@@ -141,14 +221,14 @@ AST * MakeUnaryExp(char operator, AST* operand) {
     return node;
 }
 
-AST * MakeCallExp(char * name, EXP_LIST * arg) {
+AST * MakeCallExp(char * name) {
     AST * node = (AST*) malloc(sizeof(AST));
     node->tag = tag_call;
-    node->oper.callExp.argument = arg;
     node->oper.callExp.name = name;
     return node;
 }
-AST * MakeIntExp(int value) {
+AST * MakeIntExp(char * str) {
+    int value = atoi(str);
     AST * node = (AST*) malloc(sizeof(AST));
     node->tag = tag_int;
     node->oper.intExp = value;
@@ -174,31 +254,85 @@ AST * MakeAssignExp(AST* left, AST* right) {
     node->oper.assignExp.right = right;
     return node;
 }
-EXP_LIST * MakeExpList(int ind, int end) {
-    if (ind == end) {
-        return NULL;
-    }
-    EXP_LIST * node = (EXP_LIST*)malloc(sizeof(EXP_LIST));
-    node->ast = MakeAST(ind,end);
-    node->next = MakeExpList(ind + 1, end);
+AST * MakeVarExp(char* str) {
+    AST * node = (AST*)malloc(sizeof(AST));
+    node->tag = tag_var;
+    node->oper.varExp = str;
     return node;
 }
 
-// make get next token
+// EXP_LIST * MakeExpList() { //linked list
+//     if (tokInd == tokLen) {
+//         return NULL;
+//     }
+//     EXP_LIST * node = (EXP_LIST*)malloc(sizeof(EXP_LIST));
+//     node->ast = MakeAST();
+//     node->next = MakeExpList();
+//     return node;
+// }
 
-AST * MakeAST(int lvl, int end) { // lvl starts with 0
-    if (lvl == end) {
+
+char * get_next_token() {
+    if (tokInd != tokLen) {
+        return tokens[tokInd++];
+    } else {
+        fprintf(stderr, "ERROR: Token index is out of bounds");
+        return NULL;
+    }
+
+}   
+
+AST *  parse_leaf(){
+    char * next = get_next_token();
+    AST * node; 
+
+    if (isSTRING(next)) node = MakeStrExp(next);
+    else if (isINT(next)) node = MakeIntExp(next);
+    else if (isVAR(next)) node = MakeVarExp(next);
+
+    return node;
+}
+
+AST * parse_single_assign() {
+    AST * left = parse_leaf();
+    char * oper = get_next_token();
+    AST * right = parse_leaf();
+    if (match(oper, "=")) {
+        return MakeAssignExp(left, right);
+    }
+    return NULL;
+}
+
+
+
+AST * MakeAST() { // lvl starts with 0
+    if (tokInd == tokLen) {
         return NULL;
     }
     AST * node;
-    if (lvl == 0) {
-        node = MakeNumLineExp(tokens[lvl]);
-        node->oper.nulline.next = MakeAST(lvl+ 1, end);
+    if (tokInd == 0) {
+        char * next = get_next_token();
+        node = MakeNumLineExp(next);
+        node->oper.numline.next = MakeAST();
         return node;
     }
-    if (isCallExp(tokens[lvl])) {
-        EXP_LIST * args = MakeExpList(lvl + 1, end);
-        node = MakeCallExp(tokens[lvl], args);
-    } else {}
+    if (isBINEXP(tokens[tokInd + 1])) {
+
+    }
+    else if (match(tokens[tokInd+1], "=")) {
+        AST * left = parse_leaf();
+        get_next_token();
+        AST * right = parse_leaf();
+        node = MakeAssignExp(left, right);
+        return node;
+        
+    }
+    if (isCallExp(tokens[tokInd])) {
+        char * next = get_next_token();
+        node = MakeCallExp(next);
+        node->oper.callExp.argument = MakeAST();
+        return node;
+    }
+    parse_leaf();
     return NULL;
 }

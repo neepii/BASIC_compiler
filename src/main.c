@@ -8,10 +8,11 @@ int main(int argc, char const *argv[])
     }
     FILE * src = OpenFile(argv[1]);
     FILE * tar = CreateFile("output.c");
-    int count = FillTokenArray(src);
+    FillTokenArray(src);
     TokensToLinePrint();
-    printf("%d\n", count);
+    AST * ast = MakeAST();
+    recursivePrintAST(ast);
 
-    freeTokensArr();
+
     return 0;
 }
