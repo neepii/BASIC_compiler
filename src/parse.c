@@ -26,6 +26,7 @@ static void recursionPrintAST(AST* ast, int spaces);
 void recursivePrintAST(AST* ast) {
     int spaces = 40;
     recursionPrintAST(ast, spaces);
+    printf("\n");
 }
 
 static void  recursionPrintAST(AST* ast, int spaces) {
@@ -236,7 +237,7 @@ AST * MakeIntExp(char * str) {
 }
 AST * MakeStrExp(char* str) {
     AST * node = (AST*) malloc(sizeof(AST));
-    node->tag = tag_int;
+    node->tag = tag_str;
     node->oper.strExp = str;
     return node;
 }
@@ -316,8 +317,17 @@ AST * MakeAST() { // lvl starts with 0
         node->oper.numline.next = MakeAST();
         return node;
     }
-    if (isBINEXP(tokens[tokInd + 1])) {
-
+    
+    
+    if (isSTRING(tokens[tokInd])) {
+        char * next = get_next_token();
+        node = MakeStrExp(next);
+        return node;
+    }
+    else if (isINT(tokens[tokInd])) {
+        char * next = get_next_token();
+        node = MakeIntExp(next);
+        return node;
     }
     else if (match(tokens[tokInd+1], "=")) {
         AST * left = parse_leaf();
