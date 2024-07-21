@@ -97,7 +97,7 @@ AST * parse_expression();
 void printParsedLine(AST * ast);
 void parse_error(char * str);
 void parse_syntax_error(char* str);
-bool match(char*, char*);
+bool match(char*, const char*);
 
 AST * parse_leaf();
 

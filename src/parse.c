@@ -12,18 +12,26 @@ static AST * recursive_parse_exp(AST * left, int min_prec);
 
 const char * UnaryOpers[] = {
     "+",
-    "-"
+    "-",
+
 };
 const int unary_count = 2;
 
 const char* BinOpers[] = {
-    "=",
     "+",
     "-",
     "*",
     "/",
+    "=",
+    "#",
+    "<>",
+    "><",
+    ">",
+    "<",
+    "<=",
+    ">="
 };
-const int bin_exp_count = 5;
+const int bin_opers_count = 12;
 
 int tokInd =0;
 int tokLen = 0;
@@ -31,7 +39,8 @@ int tokLen = 0;
 
 static bool isNUM(char c);
 static bool isCHAR(char c);
-static void printAST(AST * ast) {
+
+void printAST(AST * ast) {
     if (ast == NULL) {
         return;
     }
@@ -103,6 +112,14 @@ bool isSTRING(char * str) {
     return str[0] == '"';
 }
 
+bool isUNARY(char * str) {
+    for (int i = 0; i < unary_count; i++)
+    {
+        if (match(str, UnaryOpers[i])) return true;
+    }
+    return false;
+}
+
 
 bool isVAR(char * str) {
     return isCHAR(str[0]);
@@ -113,7 +130,7 @@ bool isINT(char * str) {
 }
 
 bool isBINEXP(char * str) {
-    for (int i = 0; i < bin_exp_count; i++)
+    for (int i = 0; i < bin_opers_count; i++)
     {
         if (strcmp(str, BinOpers[i]) == 0) return true;
     }
@@ -141,7 +158,7 @@ static bool isCHAR(char c) {
     return (c >=0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A);
 }
 
-bool match(char * str1, char* str2) {
+bool match(char * str1, const char* str2) {
     if (strcmp(str1, str2) == 0) {
         return true;
     }
@@ -305,6 +322,11 @@ AST * MakeVarExp() {
 AST * parse_leaf() {
     char * token = cur_token();
 
+    if (isUNARY(token)) {
+        get_next_token();
+        return MakeUnaryExp(token);
+    }
+
     if (isINT(token)) return MakeIntExp();
     if (isSTRING(token)) return MakeStrExp();
     if (isVAR(token)) return MakeVarExp();
@@ -368,11 +390,12 @@ bool compare_prec(int new_prec, int prec) { // is the new prec smaller then the 
 
 static AST * iter_parse_exp(int min_prec) {
     AST * left = parse_leaf();
+    AST * node;
     get_next_token();
 
     while (1) {
-        AST * node = recursive_parse_exp(left, min_prec);
-        if (left == node) return left;
+        node = recursive_parse_exp(left, min_prec);
+        if (left == node) return node;
         left = node;
     }
 }
@@ -380,12 +403,11 @@ static AST * iter_parse_exp(int min_prec) {
 static AST * recursive_parse_exp(AST * left, int min_prec) {
     char * op = cur_token();
     if (!isBINEXP(op)) return left;
-    get_next_token();
-
     int next_prec = get_predecense(op);
     if (compare_prec(next_prec, min_prec)) return left;
     else {
-        AST * right = iter_parse_exp(min_prec);
+        get_next_token();
+        AST * right = iter_parse_exp(next_prec);
         return MakeBinaryExp(left, op, right);
     }
 }
