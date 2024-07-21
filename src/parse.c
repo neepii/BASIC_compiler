@@ -47,6 +47,11 @@ void printAST(AST * ast) {
     printf("(");
     switch (ast->tag)
     {
+    case tag_assign:
+        printAST(ast->oper.assignExp.identifier);
+        printf(" = ");
+        printAST(ast->oper.assignExp.value);
+        break;
     case tag_numline:
         printf("%d", ast->oper.numline.value);
         printAST(ast->oper.numline.next);
@@ -62,16 +67,24 @@ void printAST(AST * ast) {
         break;
     case tag_let_statement:
         printf("LET");
-        printAST(ast->oper.letstatementExp.identifier);
-        printf(" = ");
-        printAST(ast->oper.letstatementExp.value);
+        printAST(ast->oper.common_statementExp.arg);
         break;
     case tag_print_statement:
         printf("PRINT");
-        printAST(ast->oper.printstatementExp.string);
+        printAST(ast->oper.common_statementExp.arg);
         break;
     case tag_one_word_statement:
         printf("%s", ast->oper.oneword_statement);
+        break;
+    case tag_if:
+        printf("IF");
+        printAST(ast->oper.ifstatementExp.predicate);
+        printf("THEN");
+        printAST(ast->oper.ifstatementExp.thenExp);
+        if (ast->oper.ifstatementExp.elseExp) {
+            printf("ELSE");
+            printAST(ast->oper.ifstatementExp.elseExp);
+        }
         break;
     case tag_binary:
         printAST(ast->oper.binaryExp.left);
@@ -259,12 +272,16 @@ bool LineToTokens(FILE * in) {
 
 void FreeAST(AST * ast) {
     switch (ast->tag) {
-    case tag_let_statement:
-        FreeAST(ast->oper.letstatementExp.value);
-        FreeAST(ast->oper.letstatementExp.identifier);
+    case tag_numline:
+        FreeAST(ast->oper.numline.next);
         break;
+    case tag_assign:
+        FreeAST(ast->oper.assignExp.identifier);
+        FreeAST(ast->oper.assignExp.value);
+        break;
+    case tag_let_statement:
     case tag_print_statement:
-        FreeAST(ast->oper.printstatementExp.string);
+        FreeAST(ast->oper.common_statementExp.arg);
         break;
     case tag_binary:
         FreeAST(ast->oper.binaryExp.left);
@@ -288,18 +305,12 @@ AST * MakeLetStatementExp() {
     AST * node = (AST*) malloc(sizeof(AST));
     node->tag = tag_let_statement;
     get_next_token();
-    node->oper.letstatementExp.identifier = MakeVarExp();
-    get_next_token();
-    if (!match(cur_token(), "=")) {
-        parse_syntax_error("no equal sign in let statement");
-        node->oper.letstatementExp.value = NULL;
-    } else {
-        get_next_token();
-        node->oper.letstatementExp.value = parse_expression();
-    }
+    node->oper.common_statementExp.arg = MakeAssignExp();
     return node;
 
 }
+
+
 
 AST * MakeEndStatementExp() {
     return MakeClearOneWordStatement("END");
@@ -308,13 +319,34 @@ AST * MakeClsStatementExp() {
     return MakeClearOneWordStatement("CLS");
 }
 
+AST * MakeIfStatementExp() {
+    AST * node = (AST *) malloc(sizeof(AST));
+    node->tag = tag_if;
+    get_next_token();
+    node->oper.ifstatementExp.predicate = parse_expression();
+    if (!match(cur_token(), "THEN")) {
+        parse_syntax_error("no \"THEN\" after \"IF\" statement");
+        return NULL;
+    } else {
+        get_next_token();
+        node->oper.ifstatementExp.thenExp = MakeAST();
+    }
+    if (match(cur_token(), "ELSE")) {
+        get_next_token();
+        node->oper.ifstatementExp.elseExp = MakeAST();
+    }
+    return node;
+    
+}
+
 AST * MakePrintStatementExp() {
     AST * node = (AST*) malloc(sizeof(AST));
     node->tag = tag_print_statement;
     get_next_token();
-    node->oper.printstatementExp.string = MakeStrExp();
+    node->oper.common_statementExp.arg = MakeStrExp();
     return node;    
 }
+
 
 AST * MakeBinaryExp(AST* left, char * operator, AST* right) {
     AST * node = (AST*) malloc(sizeof(AST));
@@ -368,11 +400,21 @@ AST * MakeNumLineExp() {
     return node;
 }
 
-AST * MakeAssignExp(AST* left, AST* right) {
+AST * MakeAssignExp() {
     AST * node = (AST*)malloc(sizeof(AST));
     node->tag = tag_assign;
-    node->oper.assignExp.left = left;
-    node->oper.assignExp.right = right;
+        AST * identifier = MakeVarExp();
+    get_next_token();
+    AST * value;
+    if (!match(cur_token(), "=")) {
+        parse_syntax_error("no equal sign in assignment");
+        value = NULL;
+    } else {
+        get_next_token();
+        value = parse_expression();
+    }
+    node->oper.assignExp.identifier = identifier;
+    node->oper.assignExp.value = value;
     return node;
 }
 AST * MakeVarExp() {
@@ -508,9 +550,14 @@ AST * MakeAST() { // lvl starts with 0
     else if (match(t, "PRINT")) {
         return MakePrintStatementExp();
     }
-    else if (match(t, "END"))
-    {
+    else if (match(t, "END")) {
         return MakeEndStatementExp();
+    }
+    else if (match(t, "IF")) {
+        return MakeIfStatementExp();
+    } 
+    else {
+        return MakeAssignExp();
     }
     
     return NULL;

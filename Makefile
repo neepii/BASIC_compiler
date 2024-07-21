@@ -1,6 +1,6 @@
 SRC := $(shell find src/ -regex ".*\.c")
 OBJ := $(patsubst src/%.c, %.o, $(SRC))
-FLAGS := -Wall -g 
+FLAGS := -Wall -g -Wno-switch
 EXEC_NAME := exec
 .PHONY: $(EXEC_NAME)
 

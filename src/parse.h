@@ -2,6 +2,7 @@
 #define PARSE_H_
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <string.h>
 #include <stdbool.h>
 
@@ -48,8 +49,8 @@ typedef struct exp
         char* strExp;
         char * varExp;
         struct {
-            struct exp* left;
-            struct exp* right;
+            struct exp* identifier;
+            struct exp* value;
         } assignExp;
         struct {
             int value;
@@ -68,15 +69,16 @@ typedef struct exp
             char * name;
             struct exp* arguments;
         } callExp;
-        struct 
-        {
-            struct exp* identifier;
-            struct exp* value;
-        } letstatementExp;
+        struct {
+            struct exp* predicate;
+            struct exp* thenExp;
+            struct exp* elseExp;
+        } ifstatementExp;
         struct
         {
-            struct exp* string;
-        } printstatementExp;
+            struct exp* arg;
+            struct exp* next;
+        } common_statementExp;
         char * oneword_statement;
     }oper;
 } AST;
@@ -94,7 +96,7 @@ AST * MakeIntExp();
 AST * MakeStrExp();
 AST * MakeCallExp();
 AST * MakeVarExp();
-AST * MakeAssignExp(AST* left, AST* right);
+AST * MakeAssignExp();
 AST * MakeAST();
 void freeTokensArr();
 void allocTokensArr();

@@ -15,6 +15,7 @@ int main(int argc, char const *argv[])
         if (!loop) break;
         AST * ast = MakeAST();
         printParsedLine(ast);
+        FreeAST(ast);
     }
 
     return 0;
