@@ -93,11 +93,12 @@ void allocTokensArr();
 void get_next_token();
 char * cur_token();
 char * next_token();
-AST * parse_expression(int min_prec);
+AST * parse_expression();
 void printParsedLine(AST * ast);
-AST * recursive_parse_exp(AST * left, int min_prec);
 void parse_error(char * str);
+void parse_syntax_error(char* str);
 bool match(char*, char*);
+
 AST * parse_leaf();
 
 

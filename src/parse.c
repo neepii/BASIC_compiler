@@ -7,6 +7,9 @@
 char** tokens = NULL;
 bool error_detected = false;
 
+static AST * iter_parse_exp(int min_prec);
+static AST * recursive_parse_exp(AST * left, int min_prec);
+
 const char * UnaryOpers[] = {
     "+",
     "-"
@@ -29,39 +32,54 @@ int tokLen = 0;
 static bool isNUM(char c);
 static bool isCHAR(char c);
 static void printAST(AST * ast) {
+    if (ast == NULL) {
+        return;
+    }
     printf("(");
     switch (ast->tag)
     {
     case tag_numline:
         printf("%d", ast->oper.numline.value);
+        fflush(stdout);
         printAST(ast->oper.numline.next);
         break;
     case tag_var:
         printf("%s",ast->oper.varExp);
+        fflush(stdout);
         break;
     case tag_int:
         printf("%d", ast->oper.intExp);
+        fflush(stdout);
         break;
     case tag_str:
         printf("%s", ast->oper.strExp);
+        fflush(stdout);
         break;
     case tag_let_statement:
         printf("%s", ast->oper.letstatementExp.name);
+        fflush(stdout);
         printAST(ast->oper.letstatementExp.identifier);
         printf(" = ");
+        fflush(stdout);
         printAST(ast->oper.letstatementExp.value);
+        break;
     case tag_binary:
         printAST(ast->oper.binaryExp.left);
         printf("%s", ast->oper.binaryExp.operator);
+        fflush(stdout);
         printAST(ast->oper.binaryExp.right);
+        break;
     // case tag_call:
     //     printf("%s", ast->oper.callExp.name);
     case tag_unary:
         printf("%s", ast->oper.unaryExp.operator);
+        fflush(stdout);
         printAST(ast->oper.unaryExp.operand);
+        break;
     default:
         break;
-    }    
+    }   
+    
     
 
     printf(")");
@@ -274,6 +292,9 @@ AST * MakeAssignExp(AST* left, AST* right) {
     return node;
 }
 AST * MakeVarExp() {
+    if (isINT(cur_token())) {
+        parse_syntax_error("numbers found in variable name");
+    }
     AST * node = (AST*)malloc(sizeof(AST));
     node->tag = tag_var;
     node->oper.varExp = cur_token();
@@ -284,10 +305,6 @@ AST * MakeVarExp() {
 AST * parse_leaf() {
     char * token = cur_token();
 
-    if (isBINEXP(token)) {
-        get_next_token();
-        return MakeUnaryExp(token);
-    }
     if (isINT(token)) return MakeIntExp();
     if (isSTRING(token)) return MakeStrExp();
     if (isVAR(token)) return MakeVarExp();
@@ -347,7 +364,9 @@ bool compare_prec(int new_prec, int prec) { // is the new prec smaller then the 
     else return false;
 }
 
-AST * parse_expression(int min_prec) { // put 0 in min_prec when calling
+
+
+static AST * iter_parse_exp(int min_prec) {
     AST * left = parse_leaf();
     get_next_token();
 
@@ -358,7 +377,7 @@ AST * parse_expression(int min_prec) { // put 0 in min_prec when calling
     }
 }
 
-AST * recursive_parse_exp(AST * left, int min_prec) {
+static AST * recursive_parse_exp(AST * left, int min_prec) {
     char * op = cur_token();
     if (!isBINEXP(op)) return left;
     get_next_token();
@@ -366,9 +385,13 @@ AST * recursive_parse_exp(AST * left, int min_prec) {
     int next_prec = get_predecense(op);
     if (compare_prec(next_prec, min_prec)) return left;
     else {
-        AST * right = parse_expression(min_prec);
+        AST * right = iter_parse_exp(min_prec);
         return MakeBinaryExp(left, op, right);
     }
+}
+
+AST * parse_expression() {
+    return iter_parse_exp(-1);
 }
 
 AST * parse_let_statement() {   
@@ -382,7 +405,7 @@ AST * parse_let_statement() {
         node->oper.letstatementExp.value = NULL;
     } else {
         get_next_token();
-        node->oper.letstatementExp.value = parse_expression(-1);
+        node->oper.letstatementExp.value = parse_expression();
     }
     return node;
 }
@@ -407,9 +430,6 @@ AST * MakeAST() { // lvl starts with 0
     if (match(cur_token(), "LET")) {
         return parse_let_statement();
     }
-    else {
-        return parse_expression(-1);
-    }
-    
     return NULL;
+
 }
