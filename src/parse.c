@@ -3,18 +3,19 @@
 char** tokens = NULL;
 bool error_detected = false;
 
-const char* builtins[] = {
-    "LET",
-    "PRINT"
+const char * UnaryOpers[] = {
+    "+",
+    "-"
 };
-const char* Operator[] = {
+const int unary_count = 2;
+
+const char* BinOpers[] = {
     "=",
     "+",
     "-",
     "*",
     "/",
 };
-const int builtins_count = 2;
 const int bin_exp_count = 5;
 
 int tokInd =0;
@@ -49,6 +50,20 @@ static void  recursionPrintAST(AST* ast, int spaces) {
     case tag_str:
         printf("%s", ast->oper.strExp);
         break;
+    case tag_statement:
+        printf("%s", ast->oper.statementExp.name);
+        recursionPrintAST(ast->oper.statementExp.value,spaces + 7);
+        recursionPrintAST(ast->oper.statementExp.identifier,spaces - 7);
+    case tag_binary:
+        printf("%s", ast->oper.binaryExp.operator);
+        recursionPrintAST(ast->oper.binaryExp.right,spaces + 7);
+        recursionPrintAST(ast->oper.binaryExp.left,spaces - 7);
+    case tag_call:
+        printf("%s", ast->oper.callExp.name);
+        recursivePrintAST(ast->oper.callExp.arguments);
+    case tag_unary:
+        printf("%s", ast->oper.unaryExp.operator);
+        recursivePrintAST(ast->oper.unaryExp.operand); 
     default:
         break;
     }
@@ -62,18 +77,11 @@ void TokensToLinePrint() {
     }
 }
 
-bool isCallExp(char * str) {
-    for (int i = 0; i < builtins_count; i++)
-    {
-        if (strcmp(str, builtins[i]) == 0)
-        return true;
-    }
-    return false;
-}
 
 bool isSTRING(char * str) {
     return str[0] == '"';
 }
+
 
 bool isVAR(char * str) {
     return isCHAR(str[0]);
@@ -86,7 +94,7 @@ bool isINT(char * str) {
 bool isBINEXP(char * str) {
     for (int i = 0; i < bin_exp_count; i++)
     {
-        if (strcmp(str, Operator[i]) == 0) return true;
+        if (strcmp(str, BinOpers[i]) == 0) return true;
     }
     return false;
 }
@@ -203,7 +211,6 @@ void FillTokenArray(FILE * in) {
         cur_char = fgetc(in);
     }
     tokLen = j;
-    printf("%d\n", tokLen);
 }
 
 AST * MakeStatementExp() {
@@ -213,20 +220,20 @@ AST * MakeStatementExp() {
     return node;
 }
 
-AST * MakeBinaryExp(AST* left, AST* right) {
+AST * MakeBinaryExp(AST* left, char * operator, AST* right) {
     AST * node = (AST*) malloc(sizeof(AST));
     node->tag = tag_binary;
     node->oper.binaryExp.left = left;
     node->oper.binaryExp.right = right;
-    node->oper.binaryExp.operator = cur_token();
+    node->oper.binaryExp.operator = operator;
     return node;
 }
 
-AST * MakeUnaryExp(AST * operand) {
+AST * MakeUnaryExp(char * operator) {
     AST * node = (AST*) malloc(sizeof(AST));
     node->tag = tag_unary;
-    node->oper.unaryExp.operand = operand;
-    node->oper.unaryExp.operator = cur_token();
+    node->oper.unaryExp.operand = parse_leaf();
+    node->oper.unaryExp.operator = operator;
     return node;
 }
 
@@ -271,21 +278,48 @@ AST * MakeVarExp() {
 }
 
 
-AST * parse_expression() { //recursive
-    if (isINT(cur_token())) {
-        if(match(cur_token(), "+")) {
-            return NULL; //WIP
-        }
-        else {
-            return MakeIntExp();
-        }
+AST * parse_leaf() {
+    char * token = cur_token();
+
+    if (isBINEXP(token)) {
+        get_next_token();
+        return MakeUnaryExp(token);
     }
+    if (isINT(token)) return MakeIntExp();
+    if (isSTRING(token)) return MakeStrExp();
+    if (isVAR(token)) return MakeVarExp();
+    
+
+    parse_error("input not found for parsing lead");
     return NULL;
 }
 
+int get_predecense(char * Operator) {
+    if (match(Operator, ">") ||
+        match(Operator, "<")  ||
+        match(Operator, "==")){
+        return 1;
+    }
+
+    else if (match(Operator, "+") || match (Operator, "-"))
+    {
+        return 2;
+    }
+    else if(match(Operator,"*") || match(Operator, "/")) {
+        return 3;
+    }
+    else return 0;
+}
+
+
+
 void parse_error(char * str) {
-    fprintf(stderr, "syntax error: %s\n", str);
+    fprintf(stderr, "error: %s\n", str);
     error_detected = true;
+}
+void parse_syntax_error(char *str) {
+    fprintf(stderr, "syntax error: %s\n", str);
+    error_detected = true;    
 }
 
 char * next_token() {
@@ -300,29 +334,57 @@ void get_next_token() {
     if (tokInd < tokLen) {
         tokInd++;
     } else {
-        parse_error("token index is out of bounds");
+        parse_error("index out of bounds");
     }
 
 }
+bool compare_prec(int new_prec, int prec) { // is the new prec smaller then the old one?
+    if (new_prec == -1 || prec == -1) return false;
+    else if (new_prec <= prec) return true;
+    else return false;
+}
+
+AST * parse_expression(int min_prec) { // put 0 in min_prec when calling
+    AST * left = parse_leaf();
+    get_next_token();
+
+    while (1) {
+        AST * node = recursive_parse_exp(left, min_prec);
+        if (left == node) return left;
+        left = node;
+    }
+}
+
+AST * recursive_parse_exp(AST * left, int min_prec) {
+    char * op = cur_token();
+    if (!isBINEXP(op)) return left;
+    get_next_token();
+
+    int next_prec = get_predecense(op);
+    if (compare_prec(next_prec, min_prec)) return left;
+    else {
+        AST * right = parse_expression(min_prec);
+        return MakeBinaryExp(left, op, right);
+    }
+}
 
 AST * parse_let_statement() {   
-    get_next_token();
     AST * node = MakeStatementExp();
     node->oper.statementExp.name = "LET";
     get_next_token();
     node->oper.statementExp.identifier = MakeVarExp();
     get_next_token();
-    if (match(cur_token(), "=")) {
-        parse_error("no equal sign in let statement");
+    if (!match(cur_token(), "=")) {
+        parse_syntax_error("no equal sign in let statement");
     }
     get_next_token();
-    node->oper.statementExp.value = parse_expression();
+    node->oper.statementExp.value = parse_expression(-1);
     return node;
 }
 
 AST * parse_numline() {
-    get_next_token();
     AST * node = MakeNumLineExp(cur_token());
+    get_next_token();
     node->oper.numline.next = MakeAST();
     return node;
 }
@@ -334,11 +396,14 @@ AST * MakeAST() { // lvl starts with 0
         return NULL;
     }
 
-    if (tokInd == 0) return parse_numline();
+    if (tokInd == 0 && isINT(cur_token())) return parse_numline();
     
 
     if (match(cur_token(), "LET")) {
         return parse_let_statement();
+    }
+    else {
+        return parse_expression(-1);
     }
     
     return NULL;

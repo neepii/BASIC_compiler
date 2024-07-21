@@ -81,8 +81,8 @@ void FillTokenArray(FILE * in);
 FILE * OpenFile(const char* arg);
 FILE * CreateFile(const char* arg);
 void TokensToLinePrint();
-AST * MakeBinaryExp(AST* left, AST* right);
-AST * MakeUnaryExp(AST* operand);
+AST * MakeBinaryExp(AST* left, char* operator, AST* right);
+AST * MakeUnaryExp(char * operator);
 AST * MakeIntExp();
 AST * MakeStrExp();
 AST * MakeCallExp();
@@ -94,6 +94,11 @@ void get_next_token();
 void recursivePrintAST(AST* ast);
 char * cur_token();
 char * next_token();
-AST * parse_expression();
+AST * parse_expression(int min_prec);
+AST * recursive_parse_exp(AST * left, int min_prec);
+void parse_error(char * str);
+bool match(char*, char*);
+AST * parse_leaf();
+
 
 #endif
