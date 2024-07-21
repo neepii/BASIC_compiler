@@ -65,13 +65,9 @@ void printAST(AST * ast) {
     case tag_str:
         printf("%s", ast->oper.strExp);
         break;
-    case tag_let_statement:
-        printf("LET");
-        printAST(ast->oper.common_statementExp.arg);
-        break;
-    case tag_print_statement:
-        printf("PRINT");
-        printAST(ast->oper.common_statementExp.arg);
+    case tag_common_statement:
+        printf("%s", ast->oper.commonExp.name);
+        printAST(ast->oper.commonExp.arg);
         break;
     case tag_one_word_statement:
         printf("%s", ast->oper.oneword_statement);
@@ -90,6 +86,12 @@ void printAST(AST * ast) {
         printAST(ast->oper.binaryExp.left);
         printf("%s", ast->oper.binaryExp.operator);
         printAST(ast->oper.binaryExp.right);
+        break;
+    case tag_for:
+        printf("FOR");
+        printAST(ast->oper.forstatementExp.initial);
+        printf("TO");
+        printAST(ast->oper.forstatementExp.final);
         break;
     // case tag_call:
     //     printf("%s", ast->oper.callExp.name);
@@ -279,9 +281,8 @@ void FreeAST(AST * ast) {
         FreeAST(ast->oper.assignExp.identifier);
         FreeAST(ast->oper.assignExp.value);
         break;
-    case tag_let_statement:
-    case tag_print_statement:
-        FreeAST(ast->oper.common_statementExp.arg);
+    case tag_common_statement:
+        FreeAST(ast->oper.commonExp.arg);
         break;
     case tag_binary:
         FreeAST(ast->oper.binaryExp.left);
@@ -290,22 +291,32 @@ void FreeAST(AST * ast) {
     case tag_unary:
         FreeAST(ast->oper.unaryExp.operand);
         break;
+    case tag_for:
+        FreeAST(ast->oper.forstatementExp.initial);
+        FreeAST(ast->oper.forstatementExp.final);
+        break;
+    case tag_if:
+        FreeAST(ast->oper.ifstatementExp.predicate);
+        FreeAST(ast->oper.ifstatementExp.thenExp);
+        FreeAST(ast->oper.ifstatementExp.elseExp);
     }
     free(ast);
 }
 
-AST * MakeClearOneWordStatement(char * name) {
+AST * MakeOneWordStatementExp(char * name) {
     AST * node = (AST*) malloc(sizeof(AST));
     node->tag = tag_one_word_statement;
     node->oper.oneword_statement = name;
     return node;
 }
 
-AST * MakeLetStatementExp() {
+AST * MakeCommonExp(AST* (*f)(void),char * name) {
     AST * node = (AST*) malloc(sizeof(AST));
-    node->tag = tag_let_statement;
+    node->tag = tag_common_statement;
     get_next_token();
-    node->oper.common_statementExp.arg = MakeAssignExp();
+    node->oper.commonExp.next = NULL;
+    node->oper.commonExp.arg = f();
+    node->oper.commonExp.name = name;
     return node;
 
 }
@@ -313,17 +324,17 @@ AST * MakeLetStatementExp() {
 
 
 AST * MakeEndStatementExp() {
-    return MakeClearOneWordStatement("END");
+    return MakeOneWordStatementExp("END");
 }
 AST * MakeClsStatementExp() {
-    return MakeClearOneWordStatement("CLS");
+    return MakeOneWordStatementExp("CLS");
 }
 
 AST * MakeIfStatementExp() {
     AST * node = (AST *) malloc(sizeof(AST));
     node->tag = tag_if;
     get_next_token();
-    node->oper.ifstatementExp.predicate = parse_expression();
+    node->oper.ifstatementExp.predicate = parse_arith_expression();
     if (!match(cur_token(), "THEN")) {
         parse_syntax_error("no \"THEN\" after \"IF\" statement");
         return NULL;
@@ -340,12 +351,47 @@ AST * MakeIfStatementExp() {
 }
 
 AST * MakePrintStatementExp() {
-    AST * node = (AST*) malloc(sizeof(AST));
-    node->tag = tag_print_statement;
-    get_next_token();
-    node->oper.common_statementExp.arg = MakeStrExp();
-    return node;    
+    return MakeCommonExp(MakeStrExp, "PRINT");
 }
+AST * MakeLetStatementExp() {
+    return MakeCommonExp(MakeAssignExp, "LET");
+}
+AST * MakeInputStatementExp() {
+    return MakeCommonExp(MakeVarExp, "INPUT");
+}
+AST * MakeWhileStatementExp() {
+    return MakeCommonExp(parse_arith_expression, "WHILE");
+}
+AST * MakeWendStatementExp() {
+    return MakeOneWordStatementExp("WEND");
+}
+AST * MakeNextStatementExp() {
+    return MakeCommonExp(MakeVarExp, "NEXT");
+}
+
+
+
+
+AST * MakeForStatementExp() {
+    AST * node = (AST *) malloc(sizeof(AST));
+    node->tag = tag_for;
+    get_next_token();
+    node->oper.forstatementExp.initial = MakeAssignExp();
+    if (!match(cur_token(), "TO")) {
+        parse_syntax_error("no \"TO\" after \"FOR\" statement");
+        return NULL;
+    } else {
+        get_next_token();
+        node->oper.forstatementExp.final = MakeIntExp();
+    }
+    return node;
+}
+// AST* MakeFunctionExp() {
+//     AST * node = MakeCommonExp();
+//     node->oper.commonExp.name = cur_token();
+//     node->oper.com
+
+// }
 
 
 AST * MakeBinaryExp(AST* left, char * operator, AST* right) {
@@ -403,7 +449,7 @@ AST * MakeNumLineExp() {
 AST * MakeAssignExp() {
     AST * node = (AST*)malloc(sizeof(AST));
     node->tag = tag_assign;
-        AST * identifier = MakeVarExp();
+    AST * identifier = MakeVarExp();
     get_next_token();
     AST * value;
     if (!match(cur_token(), "=")) {
@@ -411,7 +457,7 @@ AST * MakeAssignExp() {
         value = NULL;
     } else {
         get_next_token();
-        value = parse_expression();
+        value = parse_arith_expression();
     }
     node->oper.assignExp.identifier = identifier;
     node->oper.assignExp.value = value;
@@ -446,7 +492,7 @@ AST * parse_leaf() {
 }
 
 int get_predecense(char * Operator) {
-    if (match(Operator, ">") ||
+    if (match(Operator, ">") || //TODO: generalize by creating a function
         match(Operator, "<")  ||
         match(Operator, "=")){
         return 1;
@@ -521,7 +567,7 @@ static AST * recursive_parse_exp(AST * left, int min_prec) {
     }
 }
 
-AST * parse_expression() {
+AST * parse_arith_expression() {
     return iter_parse_exp(-1);
 }
 
@@ -544,7 +590,7 @@ AST * MakeAST() { // lvl starts with 0
     if (tokInd == 0 && isINT(t)) return parse_numline();
     
 
-    if (match(t, "LET")) {
+    if (match(t, "LET")) { //hash??
         return MakeLetStatementExp();
     }
     else if (match(t, "PRINT")) {
@@ -556,8 +602,17 @@ AST * MakeAST() { // lvl starts with 0
     else if (match(t, "IF")) {
         return MakeIfStatementExp();
     } 
-    else {
-        return MakeAssignExp();
+    else if (match(t, "FOR")){
+        return MakeForStatementExp();
+    }
+    else if (match(t, "NEXT")) {
+        return MakeNextStatementExp();
+    }
+    else if (match(t, "WHILE")) {
+        return MakeWhileStatementExp();
+    }
+    else if (match(t, "WEND")) {
+        return MakeWendStatementExp();
     }
     
     return NULL;

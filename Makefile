@@ -1,8 +1,10 @@
 SRC := $(shell find src/ -regex ".*\.c")
 OBJ := $(patsubst src/%.c, %.o, $(SRC))
-FLAGS := -Wall -g -Wno-switch
+FLAGS := -Wall -g
 EXEC_NAME := exec
-.PHONY: $(EXEC_NAME)
+
+.PHONY: all
+all: $(EXEC_NAME)
 
 $(EXEC_NAME): $(OBJ)
 	gcc -o $@ $^ $(FLAGS)

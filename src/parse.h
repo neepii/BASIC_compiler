@@ -37,10 +37,11 @@ typedef struct exp
         tag_unary,
         tag_binary,
         tag_assign, // no keyword 
-        tag_let_statement,
-        tag_print_statement,
+        tag_common_statement,
         tag_one_word_statement,
+        tag_function,
         tag_if,
+        tag_for,
         tag_numline
     } tag;  
     union
@@ -74,11 +75,15 @@ typedef struct exp
             struct exp* thenExp;
             struct exp* elseExp;
         } ifstatementExp;
-        struct
-        {
+        struct {
+            struct exp* initial;
+            struct exp* final;
+        } forstatementExp;
+        struct {
+            char* name;
             struct exp* arg;
             struct exp* next;
-        } common_statementExp;
+        } commonExp;
         char * oneword_statement;
     }oper;
 } AST;
@@ -87,7 +92,7 @@ bool LineToTokens(FILE * in);
 FILE * OpenFile(const char* arg);
 FILE * CreateFile(const char* arg);
 void TokensToLinePrint();
-AST * MakeClearOneWordStatement(char * name);
+AST * MakeOneWordStatementExp(char * name);
 AST * MakeEndStatementExp();
 AST * MakeClsStatementExp();
 AST * MakeBinaryExp(AST* left, char* operator, AST* right);
@@ -103,7 +108,7 @@ void allocTokensArr();
 void get_next_token();
 char * cur_token();
 char * next_token();
-AST * parse_expression();
+AST * parse_arith_expression();
 void printParsedLine(AST * ast);
 void parse_error(char * str);
 void parse_syntax_error(char* str);
