@@ -36,11 +36,11 @@ typedef struct exp
         tag_unary,
         tag_binary,
         tag_assign, // no keyword 
-        tag_statement,
+        tag_let_statement,
         tag_numline
     } tag;  
     union
-    {
+    {   
         int intExp;
         char* strExp;
         char * varExp;
@@ -70,7 +70,7 @@ typedef struct exp
             char * name;
             struct exp* identifier;
             struct exp* value;
-        } statementExp;
+        } letstatementExp;
         
 
     }oper;
@@ -91,14 +91,15 @@ AST * MakeAST();
 void freeTokensArr();
 void allocTokensArr();
 void get_next_token();
-void recursivePrintAST(AST* ast);
 char * cur_token();
 char * next_token();
 AST * parse_expression(int min_prec);
+void printParsedLine(AST * ast);
 AST * recursive_parse_exp(AST * left, int min_prec);
 void parse_error(char * str);
 bool match(char*, char*);
 AST * parse_leaf();
+
 
 
 #endif

@@ -10,7 +10,7 @@ int main(int argc, char const *argv[])
     FILE * tar = CreateFile("output.c");
     FillTokenArray(src);
     AST * ast = MakeAST();
-    recursivePrintAST(ast);
+    printParsedLine(ast);
 
 
     return 0;

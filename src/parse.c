@@ -1,4 +1,8 @@
 #include "parse.h"
+#define TREE_LEFT 0
+#define TREE_CENTER 1 
+#define TREE_RIGHT 2
+#define TREE_NOTHING -1
 
 char** tokens = NULL;
 bool error_detected = false;
@@ -24,22 +28,13 @@ int tokLen = 0;
 
 static bool isNUM(char c);
 static bool isCHAR(char c);
-
-static void recursionPrintAST(AST* ast, int spaces);
-void recursivePrintAST(AST* ast) {
-    int spaces = 40;
-    recursionPrintAST(ast, spaces);
-    printf("\n");
-}
-
-static void  recursionPrintAST(AST* ast, int spaces) {
-    printf("\n");
-    printf("\x1b[%dC", spaces);
+static void printAST(AST * ast) {
+    printf("(");
     switch (ast->tag)
     {
     case tag_numline:
         printf("%d", ast->oper.numline.value);
-        recursionPrintAST(ast->oper.numline.next,spaces);
+        printAST(ast->oper.numline.next);
         break;
     case tag_var:
         printf("%s",ast->oper.varExp);
@@ -50,25 +45,33 @@ static void  recursionPrintAST(AST* ast, int spaces) {
     case tag_str:
         printf("%s", ast->oper.strExp);
         break;
-    case tag_statement:
-        printf("%s", ast->oper.statementExp.name);
-        recursionPrintAST(ast->oper.statementExp.value,spaces + 7);
-        recursionPrintAST(ast->oper.statementExp.identifier,spaces - 7);
+    case tag_let_statement:
+        printf("%s", ast->oper.letstatementExp.name);
+        printAST(ast->oper.letstatementExp.identifier);
+        printf(" = ");
+        printAST(ast->oper.letstatementExp.value);
     case tag_binary:
+        printAST(ast->oper.binaryExp.left);
         printf("%s", ast->oper.binaryExp.operator);
-        recursionPrintAST(ast->oper.binaryExp.right,spaces + 7);
-        recursionPrintAST(ast->oper.binaryExp.left,spaces - 7);
-    case tag_call:
-        printf("%s", ast->oper.callExp.name);
-        recursivePrintAST(ast->oper.callExp.arguments);
+        printAST(ast->oper.binaryExp.right);
+    // case tag_call:
+    //     printf("%s", ast->oper.callExp.name);
     case tag_unary:
         printf("%s", ast->oper.unaryExp.operator);
-        recursivePrintAST(ast->oper.unaryExp.operand); 
+        printAST(ast->oper.unaryExp.operand);
     default:
         break;
-    }
+    }    
+    
+
+    printf(")");
+
 }
 
+void printParsedLine(AST * tree) {
+    printAST(tree);
+    printf("\n");
+}
 
 void TokensToLinePrint() {
     int i = 0;
@@ -213,10 +216,10 @@ void FillTokenArray(FILE * in) {
     tokLen = j;
 }
 
-AST * MakeStatementExp() {
+AST * MakeLetStatementExp() {
     AST * node = (AST*) malloc(sizeof(AST));
-    node->tag = tag_statement;
-    node->oper.statementExp.name = cur_token();
+    node->tag = tag_let_statement;
+    node->oper.letstatementExp.name = cur_token();
     return node;
 }
 
@@ -369,16 +372,18 @@ AST * recursive_parse_exp(AST * left, int min_prec) {
 }
 
 AST * parse_let_statement() {   
-    AST * node = MakeStatementExp();
-    node->oper.statementExp.name = "LET";
+    AST * node = MakeLetStatementExp();
+    node->oper.letstatementExp.name = "LET";
     get_next_token();
-    node->oper.statementExp.identifier = MakeVarExp();
+    node->oper.letstatementExp.identifier = MakeVarExp();
     get_next_token();
     if (!match(cur_token(), "=")) {
         parse_syntax_error("no equal sign in let statement");
+        node->oper.letstatementExp.value = NULL;
+    } else {
+        get_next_token();
+        node->oper.letstatementExp.value = parse_expression(-1);
     }
-    get_next_token();
-    node->oper.statementExp.value = parse_expression(-1);
     return node;
 }
 
