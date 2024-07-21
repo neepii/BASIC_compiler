@@ -8,10 +8,14 @@ int main(int argc, char const *argv[])
     // }
     FILE * src = OpenFile("a.bas");
     FILE * tar = CreateFile("output.c");
-    FillTokenArray(src);
-    AST * ast = MakeAST();
-    printParsedLine(ast);
-
+    bool loop = true;
+    while (true)
+    {
+        loop = LineToTokens(src);
+        if (!loop) break;
+        AST * ast = MakeAST();
+        printParsedLine(ast);
+    }
 
     return 0;
 }

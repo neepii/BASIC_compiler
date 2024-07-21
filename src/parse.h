@@ -38,6 +38,7 @@ typedef struct exp
         tag_assign, // no keyword 
         tag_let_statement,
         tag_print_statement,
+        tag_end_statement,
         tag_numline
     } tag;  
     union
@@ -75,11 +76,11 @@ typedef struct exp
         {
             struct exp* string;
         } printstatementExp;
+        int exitcode;
     }oper;
 } AST;
 
-
-void FillTokenArray(FILE * in);
+bool LineToTokens(FILE * in);
 FILE * OpenFile(const char* arg);
 FILE * CreateFile(const char* arg);
 void TokensToLinePrint();

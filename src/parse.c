@@ -5,7 +5,7 @@
 #define TREE_NOTHING -1
 
 char** tokens = NULL;
-bool error_detected = false;
+int exit_code = 0;
 
 static AST * iter_parse_exp(int min_prec);
 static AST * recursive_parse_exp(AST * left, int min_prec);
@@ -69,6 +69,9 @@ void printAST(AST * ast) {
     case tag_print_statement:
         printf("PRINT");
         printAST(ast->oper.printstatementExp.string);
+        break;
+    case tag_end_statement:
+        printf("END");
         break;
     case tag_binary:
         printAST(ast->oper.binaryExp.left);
@@ -189,7 +192,7 @@ void allocTokensArr() {
     }
 }
 
-void FillTokenArray(FILE * in) {
+bool LineToTokens(FILE * in) {
     if (tokens != NULL) {
         freeTokensArr();    
     }
@@ -201,6 +204,9 @@ void FillTokenArray(FILE * in) {
     wt last = WT_NULL;
     bool inQuotes = false;
     char cur_char = fgetc(in);
+    if (feof(in)) {
+        return false;
+    }
 
     while(cur_char && type != WT_ETC) {
 
@@ -239,12 +245,16 @@ void FillTokenArray(FILE * in) {
             }
             i=0;
         }
+
+        if (type == WT_NEWLINE) break;
+
         word[i] = cur_char;
         i++;
         last = type;
         cur_char = fgetc(in);
     }
     tokLen = j;
+    return true;
 }
 
 AST * MakeLetStatementExp() {
@@ -262,6 +272,13 @@ AST * MakeLetStatementExp() {
     }
     return node;
 
+}
+
+AST * MakeEndStatementExp() {
+    AST * node = (AST*) malloc(sizeof(AST));
+    node->tag = tag_end_statement;
+    node->oper.exitcode = exit_code;
+    return node;
 }
 
 AST * MakePrintStatementExp() {
@@ -380,11 +397,11 @@ int get_predecense(char * Operator) {
 
 void parse_error(char * str) {
     fprintf(stderr, "error: %s\n", str);
-    error_detected = true;
+    exit_code = 1;
 }
 void parse_syntax_error(char *str) {
     fprintf(stderr, "syntax error: %s\n", str);
-    error_detected = true;    
+    exit_code = 1;   
 }
 
 char * next_token() {
@@ -464,6 +481,11 @@ AST * MakeAST() { // lvl starts with 0
     else if (match(t, "PRINT")) {
         return MakePrintStatementExp();
     }
+    else if (match(t, "END"))
+    {
+        return MakeEndStatementExp();
+    }
+    
     return NULL;
 
 }
