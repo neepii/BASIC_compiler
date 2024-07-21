@@ -37,6 +37,7 @@ typedef struct exp
         tag_binary,
         tag_assign, // no keyword 
         tag_let_statement,
+        tag_print_statement,
         tag_numline
     } tag;  
     union
@@ -67,12 +68,13 @@ typedef struct exp
         } callExp;
         struct 
         {
-            char * name;
             struct exp* identifier;
             struct exp* value;
         } letstatementExp;
-        
-
+        struct
+        {
+            struct exp* string;
+        } printstatementExp;
     }oper;
 } AST;
 
@@ -86,6 +88,7 @@ AST * MakeUnaryExp(char * operator);
 AST * MakeIntExp();
 AST * MakeStrExp();
 AST * MakeCallExp();
+AST * MakeVarExp();
 AST * MakeAssignExp(AST* left, AST* right);
 AST * MakeAST();
 void freeTokensArr();

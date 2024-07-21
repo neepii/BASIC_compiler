@@ -49,40 +49,36 @@ void printAST(AST * ast) {
     {
     case tag_numline:
         printf("%d", ast->oper.numline.value);
-        fflush(stdout);
         printAST(ast->oper.numline.next);
         break;
     case tag_var:
         printf("%s",ast->oper.varExp);
-        fflush(stdout);
         break;
     case tag_int:
         printf("%d", ast->oper.intExp);
-        fflush(stdout);
         break;
     case tag_str:
         printf("%s", ast->oper.strExp);
-        fflush(stdout);
         break;
     case tag_let_statement:
-        printf("%s", ast->oper.letstatementExp.name);
-        fflush(stdout);
+        printf("LET");
         printAST(ast->oper.letstatementExp.identifier);
         printf(" = ");
-        fflush(stdout);
         printAST(ast->oper.letstatementExp.value);
+        break;
+    case tag_print_statement:
+        printf("PRINT");
+        printAST(ast->oper.printstatementExp.string);
         break;
     case tag_binary:
         printAST(ast->oper.binaryExp.left);
         printf("%s", ast->oper.binaryExp.operator);
-        fflush(stdout);
         printAST(ast->oper.binaryExp.right);
         break;
     // case tag_call:
     //     printf("%s", ast->oper.callExp.name);
     case tag_unary:
         printf("%s", ast->oper.unaryExp.operator);
-        fflush(stdout);
         printAST(ast->oper.unaryExp.operand);
         break;
     default:
@@ -254,8 +250,26 @@ void FillTokenArray(FILE * in) {
 AST * MakeLetStatementExp() {
     AST * node = (AST*) malloc(sizeof(AST));
     node->tag = tag_let_statement;
-    node->oper.letstatementExp.name = cur_token();
+    get_next_token();
+    node->oper.letstatementExp.identifier = MakeVarExp();
+    get_next_token();
+    if (!match(cur_token(), "=")) {
+        parse_syntax_error("no equal sign in let statement");
+        node->oper.letstatementExp.value = NULL;
+    } else {
+        get_next_token();
+        node->oper.letstatementExp.value = parse_expression();
+    }
     return node;
+
+}
+
+AST * MakePrintStatementExp() {
+    AST * node = (AST*) malloc(sizeof(AST));
+    node->tag = tag_print_statement;
+    get_next_token();
+    node->oper.printstatementExp.string = MakeStrExp();
+    return node;    
 }
 
 AST * MakeBinaryExp(AST* left, char * operator, AST* right) {
@@ -282,6 +296,9 @@ AST * MakeCallExp() {
     return node;
 }
 AST * MakeIntExp(){
+    if (!isINT(cur_token())) {
+        parse_syntax_error("type error with int");
+    }
     int value = atoi(cur_token());
     AST * node = (AST*) malloc(sizeof(AST));
     node->tag = tag_int;
@@ -289,12 +306,18 @@ AST * MakeIntExp(){
     return node;
 }
 AST * MakeStrExp() {
+    if (!isSTRING(cur_token())) {
+        parse_syntax_error("type error with string");
+    }
     AST * node = (AST*) malloc(sizeof(AST));
     node->tag = tag_str;
     node->oper.strExp = cur_token();
     return node;
 }
 AST * MakeNumLineExp() {
+    if (!isINT(cur_token())) {
+        parse_syntax_error("typer error with int");
+    }
     AST * node = (AST*) malloc(sizeof(AST));
     node->tag = tag_numline;
     node->oper.intExp = atoi(cur_token());
@@ -339,7 +362,7 @@ AST * parse_leaf() {
 int get_predecense(char * Operator) {
     if (match(Operator, ">") ||
         match(Operator, "<")  ||
-        match(Operator, "==")){
+        match(Operator, "=")){
         return 1;
     }
 
@@ -416,21 +439,6 @@ AST * parse_expression() {
     return iter_parse_exp(-1);
 }
 
-AST * parse_let_statement() {   
-    AST * node = MakeLetStatementExp();
-    node->oper.letstatementExp.name = "LET";
-    get_next_token();
-    node->oper.letstatementExp.identifier = MakeVarExp();
-    get_next_token();
-    if (!match(cur_token(), "=")) {
-        parse_syntax_error("no equal sign in let statement");
-        node->oper.letstatementExp.value = NULL;
-    } else {
-        get_next_token();
-        node->oper.letstatementExp.value = parse_expression();
-    }
-    return node;
-}
 
 AST * parse_numline() {
     AST * node = MakeNumLineExp(cur_token());
@@ -442,15 +450,19 @@ AST * parse_numline() {
 
 
 AST * MakeAST() { // lvl starts with 0
+    char * t = cur_token();
     if (tokInd == tokLen) {
         return NULL;
     }
 
-    if (tokInd == 0 && isINT(cur_token())) return parse_numline();
+    if (tokInd == 0 && isINT(t)) return parse_numline();
     
 
-    if (match(cur_token(), "LET")) {
-        return parse_let_statement();
+    if (match(t, "LET")) {
+        return MakeLetStatementExp();
+    }
+    else if (match(t, "PRINT")) {
+        return MakePrintStatementExp();
     }
     return NULL;
 
