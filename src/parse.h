@@ -38,7 +38,8 @@ typedef struct exp
         tag_assign, // no keyword 
         tag_let_statement,
         tag_print_statement,
-        tag_end_statement,
+        tag_one_word_statement,
+        tag_if,
         tag_numline
     } tag;  
     union
@@ -76,7 +77,7 @@ typedef struct exp
         {
             struct exp* string;
         } printstatementExp;
-        int exitcode;
+        char * oneword_statement;
     }oper;
 } AST;
 
@@ -84,6 +85,9 @@ bool LineToTokens(FILE * in);
 FILE * OpenFile(const char* arg);
 FILE * CreateFile(const char* arg);
 void TokensToLinePrint();
+AST * MakeClearOneWordStatement(char * name);
+AST * MakeEndStatementExp();
+AST * MakeClsStatementExp();
 AST * MakeBinaryExp(AST* left, char* operator, AST* right);
 AST * MakeUnaryExp(char * operator);
 AST * MakeIntExp();
@@ -102,7 +106,7 @@ void printParsedLine(AST * ast);
 void parse_error(char * str);
 void parse_syntax_error(char* str);
 bool match(char*, const char*);
-
+void FreeAST(AST * ast);
 AST * parse_leaf();
 
 

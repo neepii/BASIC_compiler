@@ -70,8 +70,8 @@ void printAST(AST * ast) {
         printf("PRINT");
         printAST(ast->oper.printstatementExp.string);
         break;
-    case tag_end_statement:
-        printf("END");
+    case tag_one_word_statement:
+        printf("%s", ast->oper.oneword_statement);
         break;
     case tag_binary:
         printAST(ast->oper.binaryExp.left);
@@ -257,6 +257,33 @@ bool LineToTokens(FILE * in) {
     return true;
 }
 
+void FreeAST(AST * ast) {
+    switch (ast->tag) {
+    case tag_let_statement:
+        FreeAST(ast->oper.letstatementExp.value);
+        FreeAST(ast->oper.letstatementExp.identifier);
+        break;
+    case tag_print_statement:
+        FreeAST(ast->oper.printstatementExp.string);
+        break;
+    case tag_binary:
+        FreeAST(ast->oper.binaryExp.left);
+        FreeAST(ast->oper.binaryExp.right);
+        break;
+    case tag_unary:
+        FreeAST(ast->oper.unaryExp.operand);
+        break;
+    }
+    free(ast);
+}
+
+AST * MakeClearOneWordStatement(char * name) {
+    AST * node = (AST*) malloc(sizeof(AST));
+    node->tag = tag_one_word_statement;
+    node->oper.oneword_statement = name;
+    return node;
+}
+
 AST * MakeLetStatementExp() {
     AST * node = (AST*) malloc(sizeof(AST));
     node->tag = tag_let_statement;
@@ -275,10 +302,10 @@ AST * MakeLetStatementExp() {
 }
 
 AST * MakeEndStatementExp() {
-    AST * node = (AST*) malloc(sizeof(AST));
-    node->tag = tag_end_statement;
-    node->oper.exitcode = exit_code;
-    return node;
+    return MakeClearOneWordStatement("END");
+}
+AST * MakeClsStatementExp() {
+    return MakeClearOneWordStatement("CLS");
 }
 
 AST * MakePrintStatementExp() {
