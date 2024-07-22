@@ -6,7 +6,7 @@
 
 char** tokens = NULL;
 int exit_code = 0;
-
+int ParenthesisLvl = 0;
 static AST * iter_parse_exp(int min_prec);
 static AST * recursive_parse_exp(AST * left, int min_prec);
 
@@ -252,7 +252,7 @@ bool LineToTokens(FILE * in) {
             type = WT_ETC;
         }
 
-        if (last != type && last != WT_NULL) {
+        if ((last != type && last != WT_NULL) || type == WT_PARENTHESIS) {
             
             if (last != WT_SPACE) {
                 strncat(tokens[j], word,i);
@@ -544,10 +544,16 @@ bool compare_prec(int new_prec, int prec) { // is the new prec smaller then the 
 
 
 static AST * iter_parse_exp(int min_prec) {
-    AST * left = parse_leaf();
+    AST * left;
     AST * node;
-    get_next_token();
-
+    if (match(cur_token(), "(")) {
+        ParenthesisLvl++;
+        get_next_token();
+        left = iter_parse_exp(0);
+    } else {
+        left = parse_leaf();
+        get_next_token();
+    }
     while (1) {
         node = recursive_parse_exp(left, min_prec);
         if (left == node) return node;
@@ -557,9 +563,19 @@ static AST * iter_parse_exp(int min_prec) {
 
 static AST * recursive_parse_exp(AST * left, int min_prec) {
     char * op = cur_token();
+    if (match(op, ")")) {
+        if (!ParenthesisLvl) {
+            parse_syntax_error("missing parenthesis");
+        }
+        ParenthesisLvl--;
+        get_next_token();  
+        return left;
+    }
     if (!isBINEXP(op)) return left;
+
     int next_prec = get_predecense(op);
     if (compare_prec(next_prec, min_prec)) return left;
+
     else {
         get_next_token();
         AST * right = iter_parse_exp(next_prec);
@@ -568,6 +584,7 @@ static AST * recursive_parse_exp(AST * left, int min_prec) {
 }
 
 AST * parse_arith_expression() {
+    if (ParenthesisLvl) parse_syntax_error("non-closed parethesis");
     return iter_parse_exp(-1);
 }
 

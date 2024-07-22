@@ -13,6 +13,7 @@ int main(int argc, char const *argv[])
     {
         loop = LineToTokens(src);
         if (!loop) break;
+        TokensToLinePrint();
         AST * ast = MakeAST();
         printParsedLine(ast);
         FreeAST(ast);
