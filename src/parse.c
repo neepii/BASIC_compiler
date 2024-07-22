@@ -224,7 +224,7 @@ bool LineToTokens(FILE * in) {
     }
 
     while(cur_char && type != WT_ETC) {
-
+        cur_char = (char)toupper(cur_char);
 
         if (cur_char == ' ') {
             type = WT_SPACE;
@@ -494,7 +494,8 @@ AST * parse_leaf() {
 int get_predecense(char * Operator) {
     if (match(Operator, ">") || //TODO: generalize by creating a function
         match(Operator, "<")  ||
-        match(Operator, "=")){
+        match(Operator, "=") ||
+        match(Operator, "")){
         return 1;
     }
 
@@ -630,6 +631,9 @@ AST * MakeAST() { // lvl starts with 0
     }
     else if (match(t, "WEND")) {
         return MakeWendStatementExp();
+    }
+    else {
+        return MakeAssignExp();
     }
     
     return NULL;
