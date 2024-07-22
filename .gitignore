@@ -1,4 +1,5 @@
-*.[coa]
+*.[ao]
+output.c
 TODO.txt
 TODO.org
 exec
