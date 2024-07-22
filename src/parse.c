@@ -1,4 +1,5 @@
 #include "parse.h"
+#include "hash.h"
 #define TREE_LEFT 0
 #define TREE_CENTER 1 
 #define TREE_RIGHT 2
@@ -108,6 +109,7 @@ void printAST(AST * ast) {
     printf(")");
 
 }
+
 
 void printParsedLine(AST * tree) {
     printAST(tree);
@@ -600,39 +602,34 @@ AST * parse_numline() {
 
 
 AST * MakeAST() { // lvl starts with 0
-    char * t = cur_token();
     if (tokInd == tokLen) {
         return NULL;
     }
 
-    if (tokInd == 0 && isINT(t)) return parse_numline();
+    if (tokInd == 0 && isINT(cur_token())) return parse_numline();
     
-
-    if (match(t, "LET")) { //hash??
+    unsigned long t = hash(cur_token());
+    switch (t)
+    {
+    case LET_H:
         return MakeLetStatementExp();
-    }
-    else if (match(t, "PRINT")) {
+    case PRINT_H:
         return MakePrintStatementExp();
-    }
-    else if (match(t, "END")) {
+    case INPUT_H:
+        return MakeInputStatementExp();
+    case END_H:
         return MakeEndStatementExp();
-    }
-    else if (match(t, "IF")) {
+    case IF_H:
         return MakeIfStatementExp();
-    } 
-    else if (match(t, "FOR")){
+    case FOR_H:
         return MakeForStatementExp();
-    }
-    else if (match(t, "NEXT")) {
+    case NEXT_H:
         return MakeNextStatementExp();
-    }
-    else if (match(t, "WHILE")) {
+    case WHILE_H:
         return MakeWhileStatementExp();
-    }
-    else if (match(t, "WEND")) {
+    case WEND_H:
         return MakeWendStatementExp();
-    }
-    else {
+    default:
         return MakeAssignExp();
     }
     

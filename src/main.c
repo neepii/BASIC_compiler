@@ -1,12 +1,21 @@
 #include "parse.h"
+#include "hash.h"
 
-int main(int argc, char const *argv[])
+int main(int argc, char  *argv[])
 {
-    // if (argc == 1) {
-    //     perror("No argument");
-    //     exit(1);
-    // }
-    FILE * src = OpenFile("a.bas");
+    if (argc == 1) {
+        printf("No arguments\n");
+        exit(1);
+    }
+    if (match(argv[1], "--test-hash")) {
+        test_hashes_on_keywords();
+        return 0;
+    }
+    FILE * src = OpenFile(argv[1]);
+    if (!src) {
+        perror("ERROR");
+        exit(1);
+    }
     FILE * tar = CreateFile("output.c");
     bool loop = true;
     while (true)
