@@ -22,6 +22,7 @@ int main(int argc, char  *argv[])
     {
         loop = LineToTokens(src);
         if (!loop) break;
+        TokensToLinePrint();
         AST * ast = MakeAST();
         printParsedLine(ast);
         FreeAST(ast);

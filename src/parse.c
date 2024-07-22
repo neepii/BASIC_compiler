@@ -93,6 +93,8 @@ void printAST(AST * ast) {
         printAST(ast->oper.forstatementExp.initial);
         printf("TO");
         printAST(ast->oper.forstatementExp.final);
+        printf("STEP");
+        printAST(ast->oper.forstatementExp.step);
         break;
     // case tag_call:
     //     printf("%s", ast->oper.callExp.name);
@@ -125,7 +127,7 @@ void TokensToLinePrint() {
 
 
 bool isSTRING(char * str) {
-    return str[0] == '"';
+    return (str[0] == '"') || (str[0] == '`');
 }
 
 bool isUNARY(char * str) {
@@ -275,6 +277,7 @@ bool LineToTokens(FILE * in) {
 }
 
 void FreeAST(AST * ast) {
+    if (ast == NULL) return;
     switch (ast->tag) {
     case tag_numline:
         FreeAST(ast->oper.numline.next);
@@ -325,12 +328,6 @@ AST * MakeCommonExp(AST* (*f)(void),char * name) {
 
 
 
-AST * MakeEndStatementExp() {
-    return MakeOneWordStatementExp("END");
-}
-AST * MakeClsStatementExp() {
-    return MakeOneWordStatementExp("CLS");
-}
 
 AST * MakeIfStatementExp() {
     AST * node = (AST *) malloc(sizeof(AST));
@@ -351,7 +348,12 @@ AST * MakeIfStatementExp() {
     return node;
     
 }
-
+AST * MakeEndStatementExp() {
+    return MakeCommonExp(MakeAST, "END");
+}
+AST * MakeClsStatementExp() {
+    return MakeOneWordStatementExp("CLS");
+}
 AST * MakePrintStatementExp() {
     return MakeCommonExp(MakeStrExp, "PRINT");
 }
@@ -384,7 +386,11 @@ AST * MakeForStatementExp() {
         return NULL;
     } else {
         get_next_token();
-        node->oper.forstatementExp.final = MakeIntExp();
+        node->oper.forstatementExp.final = parse_arith_expression();
+    }
+    if (match(cur_token(), "STEP")) {
+        get_next_token();
+        node->oper.forstatementExp.step = parse_arith_expression();
     }
     return node;
 }
@@ -609,6 +615,7 @@ AST * MakeAST() { // lvl starts with 0
     if (tokInd == 0 && isINT(cur_token())) return parse_numline();
     
     unsigned long t = hash(cur_token());
+    if (match(cur_token(), "")) return NULL;
     switch (t)
     {
     case LET_H:

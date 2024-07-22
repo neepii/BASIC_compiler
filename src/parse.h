@@ -78,6 +78,7 @@ typedef struct exp
         struct {
             struct exp* initial;
             struct exp* final;
+            struct exp* step;
         } forstatementExp;
         struct {
             char* name;
