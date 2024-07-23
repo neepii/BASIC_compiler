@@ -16,6 +16,7 @@ int main(int argc, char  *argv[])
         perror("ERROR");
         exit(1);
     }
+    AST * ast;    
     FILE * tar = CreateFile("output.c");
     introduce_s_table();
     bool loop = true;
@@ -24,10 +25,14 @@ int main(int argc, char  *argv[])
         loop = LineToTokens(src);
         if (!loop) break;
         TokensToLinePrint();
-        AST * ast = MakeAST();
+        ast = MakeAST();
         printParsedLine(ast);
         FreeAST(ast);
     }
+    freeTokensArr();
+    free_s_table();
+    fclose(src);
+    fclose(tar);
 
     return 0;
 }

@@ -87,8 +87,10 @@ typedef struct exp
         } commonExp;
         char * oneword_statement;
     }oper;
+    bool inSymbol;
 } AST;
 
+AST * AllocNode();
 bool LineToTokens(FILE * in);
 FILE * OpenFile(const char* arg);
 FILE * CreateFile(const char* arg);

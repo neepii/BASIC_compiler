@@ -29,6 +29,7 @@ typedef struct ll_node {
 } LL_NODE;
 extern LL_NODE** S_TABLE;
 
+void free_s_table();
 LL_NODE * MakeLLnode(char * name,AST * data);
 void removeLLnode(LL_NODE * head, char * name);
 AST * getLLdata(LL_NODE * head, char* name);

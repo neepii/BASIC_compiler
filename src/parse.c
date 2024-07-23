@@ -1,9 +1,6 @@
 #include "parse.h"
 #include "hash.h"
-#define TREE_LEFT 0
-#define TREE_CENTER 1 
-#define TREE_RIGHT 2
-#define TREE_NOTHING -1
+
 
 char** tokens = NULL;
 int exit_code = 0;
@@ -219,10 +216,11 @@ bool LineToTokens(FILE * in) {
     char word[TOKEN_LEN];
     int i = 0;
     int j = 0;
-    wt type;
+    wt type = WT_NULL;
     wt last = WT_NULL;
     bool inQuotes = false;
-    char cur_char = fgetc(in);
+    char cur_char;
+    cur_char = fgetc(in);
     if (feof(in)) {
         return false;
     }
@@ -277,7 +275,7 @@ bool LineToTokens(FILE * in) {
 }
 
 void FreeAST(AST * ast) {
-    if (ast == NULL) return;
+    if (ast == NULL || ast->inSymbol==true) return;
     switch (ast->tag) {
     case tag_numline:
         FreeAST(ast->oper.numline.next);
@@ -309,14 +307,14 @@ void FreeAST(AST * ast) {
 }
 
 AST * MakeOneWordStatementExp(char * name) {
-    AST * node = (AST*) malloc(sizeof(AST));
+    AST * node = AllocNode();
     node->tag = tag_one_word_statement;
     node->oper.oneword_statement = name;
     return node;
 }
 
 AST * MakeCommonExp(AST* (*f)(void),char * name) {
-    AST * node = (AST*) malloc(sizeof(AST));
+    AST * node = AllocNode();
     node->tag = tag_common_statement;
     get_next_token();
     node->oper.commonExp.next = NULL;
@@ -374,10 +372,14 @@ AST * MakeNextStatementExp() {
 }
 
 
+AST * AllocNode() {
+    AST * node = (AST *) malloc(sizeof(AST));
+    node->inSymbol = false;
+}
 
 
 AST * MakeForStatementExp() {
-    AST * node = (AST *) malloc(sizeof(AST));
+    AST* node = AllocNode();
     node->tag = tag_for;
     get_next_token();
     node->oper.forstatementExp.initial = MakeAssignExp();
@@ -403,7 +405,7 @@ AST * MakeForStatementExp() {
 
 
 AST * MakeBinaryExp(AST* left, char * operator, AST* right) {
-    AST * node = (AST*) malloc(sizeof(AST));
+    AST * node = AllocNode();
     node->tag = tag_binary;
     node->oper.binaryExp.left = left;
     node->oper.binaryExp.right = right;
@@ -412,7 +414,7 @@ AST * MakeBinaryExp(AST* left, char * operator, AST* right) {
 }
 
 AST * MakeUnaryExp(char * operator) {
-    AST * node = (AST*) malloc(sizeof(AST));
+    AST * node = AllocNode();
     node->tag = tag_unary;
     node->oper.unaryExp.operand = parse_leaf();
     node->oper.unaryExp.operator = operator;
@@ -420,7 +422,7 @@ AST * MakeUnaryExp(char * operator) {
 }
 
 AST * MakeCallExp() {
-    AST * node = (AST*) malloc(sizeof(AST));
+    AST * node = AllocNode();
     node->tag = tag_call;
     node->oper.callExp.name = cur_token();
     return node;
@@ -430,7 +432,7 @@ AST * MakeIntExp(){
         parse_syntax_error("type error with int");
     }
     int value = atoi(cur_token());
-    AST * node = (AST*) malloc(sizeof(AST));
+    AST * node = AllocNode();
     node->tag = tag_int;
     node->oper.intExp = value;
     return node;
@@ -439,7 +441,7 @@ AST * MakeStrExp() {
     if (!isSTRING(cur_token())) {
         parse_syntax_error("type error with string");
     }
-    AST * node = (AST*) malloc(sizeof(AST));
+    AST * node = AllocNode();
     node->tag = tag_str;
     node->oper.strExp = cur_token();
     return node;
@@ -448,7 +450,7 @@ AST * MakeNumLineExp() {
     if (!isINT(cur_token())) {
         parse_syntax_error("typer error with int");
     }
-    AST * node = (AST*) malloc(sizeof(AST));
+    AST * node = AllocNode();
     node->tag = tag_numline;
     node->oper.intExp = atoi(cur_token());
     return node;

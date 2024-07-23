@@ -12,9 +12,24 @@ void introduce_s_table() {
   }
 }
 
+void free_s_table() {
+    for (int i = 0; i < S_TABLE_SIZE; i++)
+    {
+        if (S_TABLE[i] != NULL){
+            FreeLLIST_all(S_TABLE[i]);
+            S_TABLE[i] = NULL;
+        }
+    }
+    free(S_TABLE);
+    
+}
+
 void add_symbol(char * name,AST * data) {
   int index = (int) hash(name) % S_TABLE_SIZE;
-  S_TABLE[index] = appendLLnode(S_TABLE[index], name, data);
+  char * alloc_name = (char*) malloc(sizeof(char)*TOKEN_LEN);
+  strcpy(alloc_name, name);
+  data->inSymbol = true;
+  S_TABLE[index] = appendLLnode(S_TABLE[index], alloc_name, data);
 }
 
 LL_NODE * MakeLLnode(char * name,AST * data) {
