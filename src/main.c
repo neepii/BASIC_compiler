@@ -17,6 +17,7 @@ int main(int argc, char  *argv[])
         exit(1);
     }
     FILE * tar = CreateFile("output.c");
+    introduce_s_table();
     bool loop = true;
     while (true)
     {

@@ -469,6 +469,9 @@ AST * MakeAssignExp() {
     }
     node->oper.assignExp.identifier = identifier;
     node->oper.assignExp.value = value;
+
+    add_symbol(identifier->oper.varExp, value);
+
     return node;
 }
 AST * MakeVarExp() {

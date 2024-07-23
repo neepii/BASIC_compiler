@@ -1,5 +1,74 @@
+#include "parse.h"
 #include "hash.h"
-#define HASH_MOD 65521
+
+
+LL_NODE** S_TABLE = NULL;
+
+void introduce_s_table() {
+  S_TABLE = (LL_NODE**) malloc(sizeof(LL_NODE*) * S_TABLE_SIZE);
+  for (int i = 0; i < S_TABLE_SIZE; i++)
+  {
+    S_TABLE[i] = NULL;
+  }
+}
+
+void add_symbol(char * name,AST * data) {
+  int index = (int) hash(name) % S_TABLE_SIZE;
+  S_TABLE[index] = appendLLnode(S_TABLE[index], name, data);
+}
+
+LL_NODE * MakeLLnode(char * name,AST * data) {
+    LL_NODE * l = (LL_NODE*)malloc(sizeof(LL_NODE));
+    l->name = name;
+    l->data = data;
+    l->next = NULL;
+    return l;
+}
+
+void removeLLnode(LL_NODE * head, char * name) {
+    LL_NODE * temp = head, *prev;
+    if (temp != NULL && match(name, temp->name)) {
+        prev = temp;
+        temp = temp->next;
+        free(prev);
+        return;
+    }
+
+    while(temp->name != name && temp != NULL) {
+        prev = temp;
+        temp = temp->next;
+    }
+    prev->next = temp->next;
+    FreeLLIST_one(temp);
+    
+}
+
+AST * getLLdata(LL_NODE * head, char* name) {
+    LL_NODE * node = head;
+    while (!match(node->name, name) && node->next != NULL){
+        node = node->next;
+    }
+    if (match(node->name, name)) return node->data;
+    return NULL;
+}
+
+LL_NODE * appendLLnode(LL_NODE * head, char * name, AST * data) {
+    LL_NODE * newnode = MakeLLnode(name, data);
+    newnode->next = head;
+    return newnode;
+}
+
+
+void FreeLLIST_one(LL_NODE * l) {
+    l->next = NULL;
+    free(l->data);
+    free(l);
+}
+
+void FreeLLIST_all(LL_NODE * l) {
+    if (l->next != NULL) FreeLLIST_all(l->next);
+    FreeLLIST_one(l); 
+}
 
 
 void quicksort(unsigned long *arr, int left, int right) {
@@ -66,3 +135,4 @@ unsigned long hash(char * str) { //adler-32
     
     return (b>>16) | a;
 }
+

@@ -2,6 +2,10 @@
 #define HASH_H_
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
+#define HASH_MOD 65521
+#define S_TABLE_SIZE 512
+
 
 //output of test-hash
 #define LET_H 229
@@ -16,7 +20,24 @@
 #define END_H 215
 
 
+
+
+typedef struct ll_node {
+    char * name;
+    AST * data;
+    struct ll_node* next;
+} LL_NODE;
+extern LL_NODE** S_TABLE;
+
+LL_NODE * MakeLLnode(char * name,AST * data);
+void removeLLnode(LL_NODE * head, char * name);
+AST * getLLdata(LL_NODE * head, char* name);
+LL_NODE * appendLLnode(LL_NODE * head, char * name, AST * data);
+void FreeLLIST_one(LL_NODE * l);
+void FreeLLIST_all(LL_NODE * l);
 unsigned long hash(char * str);
 void test_hashes_on_keywords();
+void introduce_s_table();
+void add_symbol(char * name, AST * data);
 
 #endif
