@@ -1,5 +1,7 @@
+#include "basicc.h"
 #include "parse.h"
 #include "hash.h"
+
 
 int main(int argc, char  *argv[])
 {
@@ -11,12 +13,12 @@ int main(int argc, char  *argv[])
         test_hashes_on_keywords();
         return 0;
     }
-    FILE * src = OpenFile(argv[1]);
+    FILE * src = fopen(argv[1], "r");
     if (!src) {
         perror("ERROR");
         exit(1);
     }
-    FILE * tar = CreateFile("output.c");
+    FILE * tar = fopen("output.c","w");
     introduce_s_table();
     bool loop = true;
     AST *arr[50];

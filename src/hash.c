@@ -1,5 +1,6 @@
-#include "parse.h"
+#include "basicc.h"
 #include "hash.h"
+
 
 
 LL_NODE** S_TABLE = NULL;

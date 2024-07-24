@@ -1,42 +1,11 @@
-#include "parse.h"
-#include "hash.h"
+#include "basicc.h"
 
 
-char** tokens = NULL;
+
 int exit_code = 0;
 int ParenthesisLvl = 0;
 static AST * iter_parse_exp(int min_prec);
 static AST * recursive_parse_exp(AST * left, int min_prec);
-
-const char * UnaryOpers[] = {
-    "+",
-    "-",
-
-};
-const int unary_count = 2;
-
-const char* BinOpers[] = {
-    "+",
-    "-",
-    "*",
-    "/",
-    "=",
-    "#",
-    "<>",
-    "><",
-    ">",
-    "<",
-    "<=",
-    ">="
-};
-const int bin_opers_count = 12;
-
-int tokInd =0;
-int tokLen = 0;
-
-
-static bool isNUM(char c);
-static bool isCHAR(char c);
 
 void printAST(AST * ast) {
     if (ast == NULL) {
@@ -115,164 +84,8 @@ void printParsedLine(AST * tree) {
     printf("\n");
 }
 
-void TokensToLinePrint() {
-    int i = 0;
-    while(tokens[i][0]) {
-        printf("%s\n" , tokens[i++]);
-    }
-}
 
 
-bool isSTRING(char * str) {
-    return (str[0] == '"') || (str[0] == '`');
-}
-
-bool isUNARY(char * str) {
-    for (int i = 0; i < unary_count; i++)
-    {
-        if (match(str, UnaryOpers[i])) return true;
-    }
-    return false;
-}
-
-
-bool isVAR(char * str) {
-    return isCHAR(str[0]);
-}
-
-bool isINT(char * str) {
-    return isNUM(str[0]);
-}
-
-bool isBINEXP(char * str) {
-    for (int i = 0; i < bin_opers_count; i++)
-    {
-        if (strcmp(str, BinOpers[i]) == 0) return true;
-    }
-    return false;
-}
-
-static bool isPARENTHESIS(char c) {
-    return (c==0x28 || c==0x29);
-}
-
-static bool isQUOTE(char c) {
-    return c == 0x22;
-}
-
-static bool isOPER(char c) {
-    return (c >= 0x2A && c <= 0x2D) || c == 0x2F || (c >= 0x3C && c <= 0x3E);
-}
-
-static bool isNUM(char c) {
-    return c >= 0x30 && c <= 0x39;
-}
-
-
-static bool isCHAR(char c) {
-    return (c >=0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A);
-}
-
-bool match(char * str1, const char* str2) {
-    if (strcmp(str1, str2) == 0) {
-        return true;
-    }
-    return false;
-}
-
-FILE * OpenFile(const char *arg) {
-    FILE * f = fopen(arg, "r");
-    return f;
-}
-
-FILE * CreateFile(const char *arg) {
-    FILE * f = fopen(arg, "w");
-    return f;
-}
-
-void freeTokensArr() {
-    for (int i = 0; i < MAX_TOKENS_IN_LINE; i++)
-    {
-        free(tokens[i]);
-    }
-    free(tokens);
-}
-
-void allocTokensArr() {
-    tokens = (char **) malloc(sizeof(char*) * MAX_TOKENS_IN_LINE);
-    tokInd = 0;
-    for (int i = 0; i < MAX_TOKENS_IN_LINE; i++)
-    {
-        tokens[i] = (char*) malloc(sizeof(char) * (TOKEN_LEN + 1)); 
-        memset(tokens[i], 0,20);
-    }
-}
-
-bool LineToTokens(FILE * in) {
-    if (tokens != NULL) {
-        freeTokensArr();    
-    }
-    allocTokensArr();
-    char word[TOKEN_LEN];
-    int i = 0;
-    int j = 0;
-    wt type = WT_NULL;
-    wt last = WT_NULL;
-    bool inQuotes = false;
-    char cur_char;
-    cur_char = fgetc(in);
-    if (feof(in)) {
-        return false;
-    }
-
-    while(cur_char && type != WT_ETC) {
-        cur_char = (char)toupper(cur_char);
-
-        if (cur_char == ' ') {
-            type = WT_SPACE;
-        }
-        else if (cur_char == '\n') {
-            type = WT_NEWLINE;
-        }
-        else if (isCHAR(cur_char)) {
-            type = (inQuotes) ? WT_QUOTES : WT_CHAR;
-        }
-        else if (isOPER(cur_char)) {
-            type = WT_OPER;
-        } 
-        else if (isNUM(cur_char)) {
-            type = WT_NUM;
-        }
-        else if (isQUOTE(cur_char)) {
-            type = WT_QUOTES;
-            if (!inQuotes) inQuotes = true;
-        }
-        else if (isPARENTHESIS(cur_char)) {
-            type = WT_PARENTHESIS;
-        }
-        else {
-            type = WT_ETC;
-        }
-
-        if ((last != type && last != WT_NULL) || type == WT_PARENTHESIS) {
-            
-            if (last != WT_SPACE) {
-                strncat(tokens[j], word,i);
-                j++;
-            }
-            i=0;
-        }
-
-        if (type == WT_NEWLINE) break;
-
-        word[i] = cur_char;
-        i++;
-        last = type;
-        cur_char = fgetc(in);
-    }
-    tokLen = j;
-    return true;
-}
 
 void FreeAST(AST * ast) {
     if (ast == NULL || ast->inSymbol==true) return;
@@ -375,6 +188,7 @@ AST * MakeNextStatementExp() {
 AST * AllocNode() {
     AST * node = (AST *) malloc(sizeof(AST));
     node->inSymbol = false;
+    return node;
 }
 
 
@@ -533,22 +347,7 @@ void parse_syntax_error(char *str) {
     exit_code = 1;   
 }
 
-char * next_token() {
-    return tokens[tokInd+1];
-}
 
-char * cur_token() {
-    return tokens[tokInd];
-}
-
-void get_next_token() {
-    if (tokInd < tokLen) {
-        tokInd++;
-    } else {
-        parse_error("index out of bounds");
-    }
-
-}
 bool compare_prec(int new_prec, int prec) { // is the new prec smaller then the old one?
     if (new_prec == -1 || prec == -1) return false;
     else if (new_prec <= prec) return true;

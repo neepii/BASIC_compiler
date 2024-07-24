@@ -1,31 +1,10 @@
 #ifndef PARSE_H_
 #define PARSE_H_
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <string.h>
-#include <stdbool.h>
+#include "basicc.h"
 
-#define MAX_TOKENS_IN_LINE 20
-#define TOKEN_LEN 20
 
-extern char ** tokens;
 
 typedef struct exp AST;
-typedef enum wordtype {
-    WT_CHAR,
-    WT_OPER,
-    WT_NUM,
-    WT_ETC,
-    WT_QUOTES,
-    WT_SPACE,
-    WT_NEWLINE,
-    WT_PARENTHESIS, //left and right are needede
-    WT_NULL
-} wt;
-
-
-
 
 typedef struct exp
 {
@@ -91,10 +70,6 @@ typedef struct exp
 } AST;
 
 AST * AllocNode();
-bool LineToTokens(FILE * in);
-FILE * OpenFile(const char* arg);
-FILE * CreateFile(const char* arg);
-void TokensToLinePrint();
 AST * MakeOneWordStatementExp(char * name);
 AST * MakeEndStatementExp();
 AST * MakeClsStatementExp();
