@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "parse.h"
 #define HASH_MOD 65521
 #define S_TABLE_SIZE 512
 
@@ -29,6 +30,7 @@ typedef struct ll_node {
 } LL_NODE;
 extern LL_NODE** S_TABLE;
 
+void sortAST(AST **arr, int left, int right);
 void free_s_table();
 LL_NODE * MakeLLnode(char * name,AST * data);
 void removeLLnode(LL_NODE * head, char * name);

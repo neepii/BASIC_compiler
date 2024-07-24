@@ -106,6 +106,25 @@ void quicksort(unsigned long *arr, int left, int right) {
     if (j > left) quicksort(arr, left, j);
 }
 
+void sortAST(AST *arr[], int left, int right) {
+    int i, j;
+    i = left; j = right;
+    int pivot = arr[(left+right) /2]->oper.numline.value;  
+    AST * temp;
+    do{
+        while ((arr[i]->oper.numline.value < pivot) && (i < right)) i++;
+        while ((arr[j]->oper.numline.value > pivot) && (j > left)) j--;
+        if (i<= j) {
+            temp = arr[j];
+            arr[j] = arr[i];
+            arr[i] = temp;
+            i++; j--;
+        }
+    } while (i <= j);
+
+    if (i < right) sortAST(arr, i, right);
+    if (j > left) sortAST(arr, left, j);
+}
 
 void test_hashes_on_keywords(){
     FILE * keystream = fopen("listofkeywords.txt", "r");

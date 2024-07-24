@@ -16,19 +16,31 @@ int main(int argc, char  *argv[])
         perror("ERROR");
         exit(1);
     }
-    AST * ast;    
     FILE * tar = CreateFile("output.c");
     introduce_s_table();
     bool loop = true;
+    AST *arr[50];
+    for (int i = 0; i < 50; i++)
+    {
+        arr[50] = NULL;
+    }
+    
+    int i = 0;
     while (true)
     {
         loop = LineToTokens(src);
         if (!loop) break;
-        TokensToLinePrint();
-        ast = MakeAST();
-        printParsedLine(ast);
-        FreeAST(ast);
+        arr[i] = MakeAST();
+        i++;
     }
+    sortAST(arr,0,i-1);
+    for (int j = 0; j < i; j++)
+    {
+        printParsedLine(arr[j]);
+    }
+    
+
+
     freeTokensArr();
     free_s_table();
     fclose(src);
