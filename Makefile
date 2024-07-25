@@ -3,7 +3,6 @@ OBJ := $(patsubst src/%.c, %.o, $(SRC))
 FLAGS := -Wall -g
 EXEC_NAME := exec
 
-.PHONY: all
 all: $(EXEC_NAME)
 
 $(EXEC_NAME): $(OBJ)

@@ -62,25 +62,25 @@ typedef struct exp
         struct {
             char* name;
             struct exp* arg;
-            struct exp* next;
         } commonExp;
         char * oneword_statement;
     }oper;
     bool inSymbol;
 } AST;
 
+void printAST(AST* ast);
 AST * AllocNode();
-AST * MakeOneWordStatementExp(char * name);
-AST * MakeEndStatementExp();
-AST * MakeClsStatementExp();
-AST * MakeBinaryExp(AST* left, char* operator, AST* right);
-AST * MakeUnaryExp(char * operator);
-AST * MakeIntExp();
-AST * MakeStrExp();
-AST * MakeCallExp();
-AST * MakeVarExp();
-AST * MakeAssignExp();
-AST * MakeAST();
+AST * parse_OneWordStatementExp(char * name);
+AST * parse_EndStatementExp();
+AST * parse_ClsStatementExp();
+AST * parse_BinaryExp(AST* left, char* operator, AST* right);
+AST * parse_UnaryExp(char * operator);
+AST * parse_IntExp();
+AST * parse_StrExp();
+AST * parse_CallExp();
+AST * parse_VarExp();
+AST * parse_AssignExp();
+AST * parse_AST();
 void freeTokensArr();
 void allocTokensArr();
 void get_next_token();

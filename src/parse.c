@@ -119,18 +119,17 @@ void FreeAST(AST * ast) {
     free(ast);
 }
 
-AST * MakeOneWordStatementExp(char * name) {
+AST * parse_OneWordStatementExp(char * name) {
     AST * node = AllocNode();
     node->tag = tag_one_word_statement;
     node->oper.oneword_statement = name;
     return node;
 }
 
-AST * MakeCommonExp(AST* (*f)(void),char * name) {
+AST * parse_CommonExp(AST* (*f)(void),char * name) {
     AST * node = AllocNode();
     node->tag = tag_common_statement;
     get_next_token();
-    node->oper.commonExp.next = NULL;
     node->oper.commonExp.arg = f();
     node->oper.commonExp.name = name;
     return node;
@@ -140,7 +139,7 @@ AST * MakeCommonExp(AST* (*f)(void),char * name) {
 
 
 
-AST * MakeIfStatementExp() {
+AST * parse_IfStatementExp() {
     AST * node = (AST *) malloc(sizeof(AST));
     node->tag = tag_if;
     get_next_token();
@@ -150,38 +149,38 @@ AST * MakeIfStatementExp() {
         return NULL;
     } else {
         get_next_token();
-        node->oper.ifstatementExp.thenExp = MakeAST();
+        node->oper.ifstatementExp.thenExp = parse_AST();
     }
     if (match(cur_token(), "ELSE")) {
         get_next_token();
-        node->oper.ifstatementExp.elseExp = MakeAST();
+        node->oper.ifstatementExp.elseExp = parse_AST();
     }
     return node;
     
 }
-AST * MakeEndStatementExp() {
-    return MakeCommonExp(MakeAST, "END");
+AST * parse_EndStatementExp() {
+    return parse_CommonExp(parse_AST, "END");
 }
-AST * MakeClsStatementExp() {
-    return MakeOneWordStatementExp("CLS");
+AST * parse_ClsStatementExp() {
+    return parse_OneWordStatementExp("CLS");
 }
-AST * MakePrintStatementExp() {
-    return MakeCommonExp(MakeStrExp, "PRINT");
+AST * parse_PrintStatementExp() {
+    return parse_CommonExp(parse_leaf, "PRINT");
 }
-AST * MakeLetStatementExp() {
-    return MakeCommonExp(MakeAssignExp, "LET");
+AST * parse_LetStatementExp() {
+    return parse_CommonExp(parse_AssignExp, "LET");
 }
-AST * MakeInputStatementExp() {
-    return MakeCommonExp(MakeVarExp, "INPUT");
+AST * parse_InputStatementExp() {
+    return parse_CommonExp(parse_VarExp, "INPUT");
 }
-AST * MakeWhileStatementExp() {
-    return MakeCommonExp(parse_arith_expression, "WHILE");
+AST * parse_WhileStatementExp() {
+    return parse_CommonExp(parse_arith_expression, "WHILE");
 }
-AST * MakeWendStatementExp() {
-    return MakeOneWordStatementExp("WEND");
+AST * parse_WendStatementExp() {
+    return parse_OneWordStatementExp("WEND");
 }
-AST * MakeNextStatementExp() {
-    return MakeCommonExp(MakeVarExp, "NEXT");
+AST * parse_NextStatementExp() {
+    return parse_CommonExp(parse_VarExp, "NEXT");
 }
 
 
@@ -192,11 +191,11 @@ AST * AllocNode() {
 }
 
 
-AST * MakeForStatementExp() {
+AST * parse_ForStatementExp() {
     AST* node = AllocNode();
     node->tag = tag_for;
     get_next_token();
-    node->oper.forstatementExp.initial = MakeAssignExp();
+    node->oper.forstatementExp.initial = parse_AssignExp();
     if (!match(cur_token(), "TO")) {
         parse_syntax_error("no \"TO\" after \"FOR\" statement");
         return NULL;
@@ -210,15 +209,15 @@ AST * MakeForStatementExp() {
     }
     return node;
 }
-// AST* MakeFunctionExp() {
-//     AST * node = MakeCommonExp();
+// AST* parse_FunctionExp() {
+//     AST * node = parse_CommonExp();
 //     node->oper.commonExp.name = cur_token();
 //     node->oper.com
 
 // }
 
 
-AST * MakeBinaryExp(AST* left, char * operator, AST* right) {
+AST * parse_BinaryExp(AST* left, char * operator, AST* right) {
     AST * node = AllocNode();
     node->tag = tag_binary;
     node->oper.binaryExp.left = left;
@@ -227,7 +226,7 @@ AST * MakeBinaryExp(AST* left, char * operator, AST* right) {
     return node;
 }
 
-AST * MakeUnaryExp(char * operator) {
+AST * parse_UnaryExp(char * operator) {
     AST * node = AllocNode();
     node->tag = tag_unary;
     node->oper.unaryExp.operand = parse_leaf();
@@ -235,13 +234,13 @@ AST * MakeUnaryExp(char * operator) {
     return node;
 }
 
-AST * MakeCallExp() {
+AST * parse_CallExp() {
     AST * node = AllocNode();
     node->tag = tag_call;
     node->oper.callExp.name = cur_token();
     return node;
 }
-AST * MakeIntExp(){
+AST * parse_IntExp(){
     if (!isINT(cur_token())) {
         parse_syntax_error("type error with int");
     }
@@ -251,7 +250,7 @@ AST * MakeIntExp(){
     node->oper.intExp = value;
     return node;
 }
-AST * MakeStrExp() {
+AST * parse_StrExp() {
     if (!isSTRING(cur_token())) {
         parse_syntax_error("type error with string");
     }
@@ -260,7 +259,7 @@ AST * MakeStrExp() {
     node->oper.strExp = cur_token();
     return node;
 }
-AST * MakeNumLineExp() {
+AST * parse_NumLineExp() {
     if (!isINT(cur_token())) {
         parse_syntax_error("typer error with int");
     }
@@ -270,10 +269,10 @@ AST * MakeNumLineExp() {
     return node;
 }
 
-AST * MakeAssignExp() {
+AST * parse_AssignExp() {
     AST * node = (AST*)malloc(sizeof(AST));
     node->tag = tag_assign;
-    AST * identifier = MakeVarExp();
+    AST * identifier = parse_VarExp();
     get_next_token();
     AST * value;
     if (!match(cur_token(), "=")) {
@@ -290,7 +289,7 @@ AST * MakeAssignExp() {
 
     return node;
 }
-AST * MakeVarExp() {
+AST * parse_VarExp() {
     if (isINT(cur_token())) {
         parse_syntax_error("numbers found in variable name");
     }
@@ -306,12 +305,12 @@ AST * parse_leaf() {
 
     if (isUNARY(token)) {
         get_next_token();
-        return MakeUnaryExp(token);
+        return parse_UnaryExp(token);
     }
 
-    if (isINT(token)) return MakeIntExp();
-    if (isSTRING(token)) return MakeStrExp();
-    if (isVAR(token)) return MakeVarExp();
+    if (isINT(token)) return parse_IntExp();
+    if (isSTRING(token)) return parse_StrExp();
+    if (isVAR(token)) return parse_VarExp();
     
 
     parse_error("input not found for parsing lead");
@@ -392,7 +391,7 @@ static AST * recursive_parse_exp(AST * left, int min_prec) {
     else {
         get_next_token();
         AST * right = iter_parse_exp(next_prec);
-        return MakeBinaryExp(left, op, right);
+        return parse_BinaryExp(left, op, right);
     }
 }
 
@@ -403,15 +402,15 @@ AST * parse_arith_expression() {
 
 
 AST * parse_numline() {
-    AST * node = MakeNumLineExp(cur_token());
+    AST * node = parse_NumLineExp(cur_token());
     get_next_token();
-    node->oper.numline.next = MakeAST();
+    node->oper.numline.next = parse_AST();
     return node;
 }
 
 
 
-AST * MakeAST() { // lvl starts with 0
+AST * parse_AST() { // lvl starts with 0
     if (tokInd == tokLen) {
         return NULL;
     }
@@ -423,25 +422,26 @@ AST * MakeAST() { // lvl starts with 0
     switch (t)
     {
     case LET_H:
-        return MakeLetStatementExp();
+        return parse_LetStatementExp();
     case PRINT_H:
-        return MakePrintStatementExp();
+        return parse_PrintStatementExp();
     case INPUT_H:
-        return MakeInputStatementExp();
+        return parse_InputStatementExp();
     case END_H:
-        return MakeEndStatementExp();
+        return parse_EndStatementExp();
     case IF_H:
-        return MakeIfStatementExp();
+        return parse_IfStatementExp();
     case FOR_H:
-        return MakeForStatementExp();
+        return parse_ForStatementExp();
     case NEXT_H:
-        return MakeNextStatementExp();
+        return parse_NextStatementExp();
     case WHILE_H:
-        return MakeWhileStatementExp();
+        return parse_WhileStatementExp();
     case WEND_H:
-        return MakeWendStatementExp();
+        return parse_WendStatementExp();
     default:
-        return MakeAssignExp();
+        if (match(next_token(), "=")) return parse_AssignExp();
+        parse_leaf();
     }
     
     return NULL;

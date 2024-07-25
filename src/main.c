@@ -18,13 +18,12 @@ int main(int argc, char  *argv[])
         perror("ERROR");
         exit(1);
     }
-    FILE * tar = fopen("output.c","w");
     introduce_s_table();
     bool loop = true;
-    AST *arr[50];
-    for (int i = 0; i < 50; i++)
+    AST* statements[50];
+    for (int i = 0; i <50 ; i++)
     {
-        arr[50] = NULL;
+        statements[i] = NULL;
     }
     
     int i = 0;
@@ -32,21 +31,19 @@ int main(int argc, char  *argv[])
     {
         loop = LineToTokens(src);
         if (!loop) break;
-        arr[i] = MakeAST();
+        statements[i] = parse_AST();
         i++;
     }
-    sortAST(arr,0,i-1);
+    sortAST(statements,0,i-1);
     for (int j = 0; j < i; j++)
     {
-        printParsedLine(arr[j]);
+        printParsedLine(statements[j]);
     }
-    
-
+    make_target_src();
 
     freeTokensArr();
     free_s_table();
     fclose(src);
-    fclose(tar);
 
     return 0;
 }

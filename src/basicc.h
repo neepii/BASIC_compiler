@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <stdbool.h>
+#include <assert.h>
 #include "parse.h"
 #include "hash.h"
 #include "token.h"
@@ -27,8 +28,9 @@
 #define MAX_TOKENS_IN_LINE 20
 #define TOKEN_LEN 20
 extern char ** tokens;
-
 extern int tokInd;
 extern int tokLen;
+
+extern AST** statements;
 
 #endif
