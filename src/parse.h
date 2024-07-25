@@ -1,6 +1,7 @@
 #ifndef PARSE_H_
 #define PARSE_H_
 #include "basicc.h"
+#define AST_STR_LEN 20
 
 
 
@@ -26,8 +27,8 @@ typedef struct exp
     union
     {   
         int intExp;
-        char* strExp;
-        char * varExp;
+        char strExp[AST_STR_LEN];
+        char varExp[AST_STR_LEN];
         struct {
             struct exp* identifier;
             struct exp* value;
@@ -39,14 +40,14 @@ typedef struct exp
         struct {
             struct exp* left;
             struct exp* right;
-            char * operator;
+            char operator[AST_STR_LEN];
         } binaryExp;
         struct {
             struct exp* operand;
-            char * operator;
+            char operator[AST_STR_LEN];
         } unaryExp;
         struct {
-            char * name;
+            char name[AST_STR_LEN];
             struct exp* arguments;
         } callExp;
         struct {
@@ -60,10 +61,10 @@ typedef struct exp
             struct exp* step;
         } forstatementExp;
         struct {
-            char* name;
+            char name[AST_STR_LEN];
             struct exp* arg;
         } commonExp;
-        char * oneword_statement;
+        char oneword_statement[AST_STR_LEN];
     }oper;
     bool inSymbol;
 } AST;

@@ -24,7 +24,7 @@
 
 
 typedef struct ll_node {
-    char * name;
+    char name[AST_STR_LEN];
     AST * data;
     struct ll_node* next;
 } LL_NODE;

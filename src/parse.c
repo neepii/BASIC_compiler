@@ -115,6 +115,7 @@ void FreeAST(AST * ast) {
         FreeAST(ast->oper.ifstatementExp.predicate);
         FreeAST(ast->oper.ifstatementExp.thenExp);
         FreeAST(ast->oper.ifstatementExp.elseExp);
+        break;
     }
     free(ast);
 }
@@ -122,7 +123,7 @@ void FreeAST(AST * ast) {
 AST * parse_OneWordStatementExp(char * name) {
     AST * node = AllocNode();
     node->tag = tag_one_word_statement;
-    node->oper.oneword_statement = name;
+    strcpy(node->oper.oneword_statement,name);
     return node;
 }
 
@@ -130,8 +131,8 @@ AST * parse_CommonExp(AST* (*f)(void),char * name) {
     AST * node = AllocNode();
     node->tag = tag_common_statement;
     get_next_token();
+    strcpy(node->oper.commonExp.name, name);
     node->oper.commonExp.arg = f();
-    node->oper.commonExp.name = name;
     return node;
 
 }
@@ -140,7 +141,7 @@ AST * parse_CommonExp(AST* (*f)(void),char * name) {
 
 
 AST * parse_IfStatementExp() {
-    AST * node = (AST *) malloc(sizeof(AST));
+    AST * node = AllocNode();
     node->tag = tag_if;
     get_next_token();
     node->oper.ifstatementExp.predicate = parse_arith_expression();
@@ -220,26 +221,26 @@ AST * parse_ForStatementExp() {
 AST * parse_BinaryExp(AST* left, char * operator, AST* right) {
     AST * node = AllocNode();
     node->tag = tag_binary;
+    strcpy(node->oper.binaryExp.operator,operator);
     node->oper.binaryExp.left = left;
     node->oper.binaryExp.right = right;
-    node->oper.binaryExp.operator = operator;
     return node;
 }
 
 AST * parse_UnaryExp(char * operator) {
     AST * node = AllocNode();
     node->tag = tag_unary;
+    strcpy(node->oper.unaryExp.operator,operator);
     node->oper.unaryExp.operand = parse_leaf();
-    node->oper.unaryExp.operator = operator;
     return node;
 }
 
-AST * parse_CallExp() {
-    AST * node = AllocNode();
-    node->tag = tag_call;
-    node->oper.callExp.name = cur_token();
-    return node;
-}
+// AST * parse_CallExp() {
+//     AST * node = AllocNode();
+//     node->tag = tag_call;s
+//     node->oper.callExp.name = cur_token();
+//     return node;
+// }
 AST * parse_IntExp(){
     if (!isINT(cur_token())) {
         parse_syntax_error("type error with int");
@@ -255,8 +256,8 @@ AST * parse_StrExp() {
         parse_syntax_error("type error with string");
     }
     AST * node = AllocNode();
+    strcpy(node->oper.strExp, cur_token());
     node->tag = tag_str;
-    node->oper.strExp = cur_token();
     return node;
 }
 AST * parse_NumLineExp() {
@@ -266,11 +267,13 @@ AST * parse_NumLineExp() {
     AST * node = AllocNode();
     node->tag = tag_numline;
     node->oper.intExp = atoi(cur_token());
+    get_next_token();
+    node->oper.numline.next = parse_AST();
     return node;
 }
 
 AST * parse_AssignExp() {
-    AST * node = (AST*)malloc(sizeof(AST));
+    AST * node = AllocNode();
     node->tag = tag_assign;
     AST * identifier = parse_VarExp();
     get_next_token();
@@ -293,16 +296,15 @@ AST * parse_VarExp() {
     if (isINT(cur_token())) {
         parse_syntax_error("numbers found in variable name");
     }
-    AST * node = (AST*)malloc(sizeof(AST));
+    AST * node = AllocNode();
+    strcpy(node->oper.varExp, cur_token());
     node->tag = tag_var;
-    node->oper.varExp = cur_token();
     return node;
 }
 
 
 AST * parse_leaf() {
     char * token = cur_token();
-
     if (isUNARY(token)) {
         get_next_token();
         return parse_UnaryExp(token);
@@ -402,10 +404,7 @@ AST * parse_arith_expression() {
 
 
 AST * parse_numline() {
-    AST * node = parse_NumLineExp(cur_token());
-    get_next_token();
-    node->oper.numline.next = parse_AST();
-    return node;
+
 }
 
 
@@ -415,7 +414,7 @@ AST * parse_AST() { // lvl starts with 0
         return NULL;
     }
 
-    if (tokInd == 0 && isINT(cur_token())) return parse_numline();
+    if (tokInd == 0 && isINT(cur_token())) return parse_NumLineExp();
     
     unsigned long t = hash(cur_token());
     if (match(cur_token(), "")) return NULL;
@@ -440,8 +439,8 @@ AST * parse_AST() { // lvl starts with 0
     case WEND_H:
         return parse_WendStatementExp();
     default:
-        if (match(next_token(), "=")) return parse_AssignExp();
-        parse_leaf();
+        return parse_AssignExp();
+
     }
     
     return NULL;

@@ -20,11 +20,7 @@ int main(int argc, char  *argv[])
     }
     introduce_s_table();
     bool loop = true;
-    AST* statements[50];
-    for (int i = 0; i <50 ; i++)
-    {
-        statements[i] = NULL;
-    }
+    AST* statements[50] = {NULL};
     
     int i = 0;
     while (true)
@@ -39,7 +35,12 @@ int main(int argc, char  *argv[])
     {
         printParsedLine(statements[j]);
     }
-    make_target_src();
+    for (int j = 0; j < i; j++)
+    {
+        if (statements[j] != NULL) FreeAST(statements[j]);
+    }
+    
+    // make_target_src();
 
     freeTokensArr();
     free_s_table();

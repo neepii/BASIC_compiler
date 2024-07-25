@@ -27,15 +27,13 @@ void free_s_table() {
 
 void add_symbol(char * name,AST * data) {
   int index = (int) hash(name) % S_TABLE_SIZE;
-  char * alloc_name = (char*) malloc(sizeof(char)*TOKEN_LEN);
-  strcpy(alloc_name, name);
   data->inSymbol = true;
-  S_TABLE[index] = appendLLnode(S_TABLE[index], alloc_name, data);
+  S_TABLE[index] = appendLLnode(S_TABLE[index], name, data);
 }
 
 LL_NODE * MakeLLnode(char * name,AST * data) {
     LL_NODE * l = (LL_NODE*)malloc(sizeof(LL_NODE));
-    l->name = name;
+    strcpy(l->name, name);
     l->data = data;
     l->next = NULL;
     return l;
@@ -77,7 +75,8 @@ LL_NODE * appendLLnode(LL_NODE * head, char * name, AST * data) {
 
 void FreeLLIST_one(LL_NODE * l) {
     l->next = NULL;
-    free(l->data);
+    l->data->inSymbol=false; // this func is only for AST llists
+    FreeAST(l->data);
     free(l);
 }
 
