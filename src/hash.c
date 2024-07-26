@@ -1,24 +1,28 @@
 #include "basicc.h"
 #include "hash.h"
+int min_available_id = 0;
 
 
 
-LL_NODE** S_TABLE = NULL;
+hashmap * S_TABLE = NULL;
 
 void introduce_s_table() {
-  S_TABLE = (LL_NODE**) malloc(sizeof(LL_NODE*) * S_TABLE_SIZE);
+  S_TABLE = (hashmap*) malloc(sizeof(hashmap));
+  S_TABLE->list = (LL_NODE**) malloc(sizeof(LL_NODE*) * S_TABLE_SIZE);
   for (int i = 0; i < S_TABLE_SIZE; i++)
   {
-    S_TABLE[i] = NULL;
+    S_TABLE->list[i] = NULL;
+    S_TABLE->ids[i] = -1;
   }
+
 }
 
 void free_s_table() {
     for (int i = 0; i < S_TABLE_SIZE; i++)
     {
-        if (S_TABLE[i] != NULL){
-            FreeLLIST_all(S_TABLE[i]);
-            S_TABLE[i] = NULL;
+        if (S_TABLE->list[i] != NULL){
+            FreeLLIST_all(S_TABLE->list[i]);
+            S_TABLE->list[i] = NULL;
         }
     }
     free(S_TABLE);
@@ -28,7 +32,8 @@ void free_s_table() {
 void add_symbol(char * name,AST * data) {
   int index = (int) hash(name) % S_TABLE_SIZE;
   data->inSymbol = true;
-  S_TABLE[index] = appendLLnode(S_TABLE[index], name, data);
+  S_TABLE->list[index] = appendLLnode(S_TABLE->list[index], name, data);
+  S_TABLE->ids[min_available_id++] = index;
 }
 
 LL_NODE * MakeLLnode(char * name,AST * data) {
@@ -68,6 +73,7 @@ AST * getLLdata(LL_NODE * head, char* name) {
 
 LL_NODE * appendLLnode(LL_NODE * head, char * name, AST * data) {
     LL_NODE * newnode = MakeLLnode(name, data);
+    newnode->id = min_available_id;
     newnode->next = head;
     return newnode;
 }

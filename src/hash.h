@@ -26,9 +26,13 @@
 typedef struct ll_node {
     char name[AST_STR_LEN];
     AST * data;
+    unsigned int id;
     struct ll_node* next;
 } LL_NODE;
-extern LL_NODE** S_TABLE;
+typedef struct s_table{
+    LL_NODE** list;
+    int ids[S_TABLE_SIZE];   
+} hashmap;
 
 void sortAST(AST **arr, int left, int right);
 void free_s_table();
