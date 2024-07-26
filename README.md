@@ -1,1 +1,1 @@
-A source-to-source compiler. Translates BASIC to C. WIP.
+Translates BASIC to C. WIP.
