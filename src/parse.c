@@ -23,6 +23,8 @@ void printAST(AST * ast) {
         printf("%d", ast->oper.numline.value);
         printAST(ast->oper.numline.next);
         break;
+    case tag_symbol:
+        printf("<id: %d>", ast->oper.symbol);
     case tag_var:
         printf("%s",ast->oper.varExp);
         break;
@@ -166,7 +168,11 @@ AST * parse_ClsStatementExp() {
     return parse_OneWordStatementExp("CLS");
 }
 AST * parse_PrintStatementExp() {
-    return parse_CommonExp(parse_leaf, "PRINT");
+    char * str = next_token();
+    AST * node = parse_CommonExp(parse_leaf, "PRINT");
+    add_symbol(str, node->oper.commonExp.arg);
+    S_TABLE->list[S_TABLE->inds[min_available_id-1]]->type = type_literal;
+    return node;
 }
 AST * parse_LetStatementExp() {
     return parse_CommonExp(parse_AssignExp, "LET");
@@ -288,7 +294,9 @@ AST * parse_AssignExp() {
     node->oper.assignExp.identifier = identifier;
     node->oper.assignExp.value = value;
 
+
     add_symbol(identifier->oper.varExp, value);
+    S_TABLE->list[S_TABLE->inds[min_available_id-1]]->type = type_variable;
 
     return node;
 }
@@ -403,9 +411,6 @@ AST * parse_arith_expression() {
 }
 
 
-AST * parse_numline() {
-
-}
 
 
 

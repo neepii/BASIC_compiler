@@ -14,6 +14,7 @@ typedef struct exp
         tag_str,
         tag_call, // function
         tag_var,
+        tag_symbol,
         tag_unary,
         tag_binary,
         tag_assign, // no keyword 
@@ -26,6 +27,7 @@ typedef struct exp
     } tag;  
     union
     {   
+        int symbol;
         int intExp;
         char strExp[AST_STR_LEN];
         char varExp[AST_STR_LEN];

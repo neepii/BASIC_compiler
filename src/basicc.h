@@ -9,6 +9,7 @@
 #include "parse.h"
 #include "hash.h"
 #include "token.h"
+#include "gen.h"
 #define HASH_MOD 65521
 #define S_TABLE_SIZE 512
 

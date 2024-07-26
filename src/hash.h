@@ -22,17 +22,24 @@
 
 
 
-
 typedef struct ll_node {
     char name[AST_STR_LEN];
     AST * data;
+    enum {
+        type_literal,
+        type_variable,
+        type_null
+    } type;
     unsigned int id;
     struct ll_node* next;
 } LL_NODE;
 typedef struct s_table{
     LL_NODE** list;
-    int ids[S_TABLE_SIZE];   
+    int inds[S_TABLE_SIZE];   
 } hashmap;
+
+extern hashmap * S_TABLE;
+extern int min_available_id;
 
 void sortAST(AST **arr, int left, int right);
 void free_s_table();

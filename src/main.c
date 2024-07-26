@@ -2,6 +2,7 @@
 #include "parse.h"
 #include "hash.h"
 
+#define STATEMENTS_SIZE 50
 
 int main(int argc, char  *argv[])
 {
@@ -20,8 +21,12 @@ int main(int argc, char  *argv[])
     }
     introduce_s_table();
     bool loop = true;
-    AST* statements[50] = {NULL};
-    
+    statements = (AST**)malloc(sizeof(AST*) * STATEMENTS_SIZE);
+    for (int  i = 0; i < STATEMENTS_SIZE; i++)
+    {
+        statements[i] = NULL;
+    }
+
     int i = 0;
     while (true)
     {
@@ -35,13 +40,16 @@ int main(int argc, char  *argv[])
     {
         printParsedLine(statements[j]);
     }
+
+    make_target_src();
+
     for (int j = 0; j < i; j++)
     {
         if (statements[j] != NULL) FreeAST(statements[j]);
     }
-    
-    // make_target_src();
+        
 
+    free(statements);
     freeTokensArr();
     free_s_table();
     fclose(src);

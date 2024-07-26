@@ -12,35 +12,42 @@ void introduce_s_table() {
   for (int i = 0; i < S_TABLE_SIZE; i++)
   {
     S_TABLE->list[i] = NULL;
-    S_TABLE->ids[i] = -1;
+    S_TABLE->inds[i] = -1;
   }
 
 }
 
 void free_s_table() {
     for (int i = 0; i < S_TABLE_SIZE; i++)
-    {
-        if (S_TABLE->list[i] != NULL){
-            FreeLLIST_all(S_TABLE->list[i]);
-            S_TABLE->list[i] = NULL;
-        }
+    {   
+        if (S_TABLE->inds[i] == -1) break;
+        int ind = S_TABLE->inds[i];
+        FreeLLIST_all(S_TABLE->list[ind]);
+        S_TABLE->list[ind] = NULL;
+    
     }
+    free(S_TABLE->list);
     free(S_TABLE);
     
 }
 
 void add_symbol(char * name,AST * data) {
   int index = (int) hash(name) % S_TABLE_SIZE;
-  data->inSymbol = true;
   S_TABLE->list[index] = appendLLnode(S_TABLE->list[index], name, data);
-  S_TABLE->ids[min_available_id++] = index;
+  S_TABLE->inds[min_available_id] = index;
+  data->oper.symbol = min_available_id;
+  data->inSymbol = true;
+  data->tag = tag_symbol;
+  min_available_id++;
 }
 
 LL_NODE * MakeLLnode(char * name,AST * data) {
     LL_NODE * l = (LL_NODE*)malloc(sizeof(LL_NODE));
-    strcpy(l->name, name);
+    int len = strlen(name);
+    strncpy(l->name, name + 1, len - 2);
     l->data = data;
     l->next = NULL;
+    l->type = type_null;
     return l;
 }
 
