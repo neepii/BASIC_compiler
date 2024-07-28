@@ -41,8 +41,8 @@ static void data_section() {
         LL_NODE * list = S_TABLE->list[ind];
         
         while (S_TABLE->list[ind]->id != i) list = list->next;
-        if (list->type == type_literal) {
-            put("str%d: .ascii \"%s\\n\"", list->id, list->name);
+        if (list->type == type_string) {
+            put("str%d: .ascii \"%s\\n\"", list->id, list->data.c);
         }
     }
 }
@@ -92,7 +92,7 @@ static void start() {
                 char str[50] = {0};
                 char len[25] = {0};
                 sprintf(str, "str%d", id);
-                sprintf(len, "%ld", strlen(S_TABLE->list[ind]->name)+1);
+                sprintf(len, "%ld", strlen(S_TABLE->list[ind]->data.c)+1);
                 multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "1", len, str, "1");
                 put("syscall");
                 put("");

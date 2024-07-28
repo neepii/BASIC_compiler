@@ -171,7 +171,6 @@ AST * parse_PrintStatementExp() {
     char * str = next_token();
     AST * node = parse_CommonExp(parse_leaf, "PRINT");
     add_symbol(str, node->oper.commonExp.arg);
-    S_TABLE->list[S_TABLE->inds[min_available_id-1]]->type = type_literal;
     return node;
 }
 AST * parse_LetStatementExp() {

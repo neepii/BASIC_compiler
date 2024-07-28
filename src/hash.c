@@ -36,18 +36,26 @@ void add_symbol(char * name,AST * data) {
   S_TABLE->list[index] = appendLLnode(S_TABLE->list[index], name, data);
   S_TABLE->inds[min_available_id] = index;
   data->oper.symbol = min_available_id;
-  data->inSymbol = true;
   data->tag = tag_symbol;
   min_available_id++;
 }
 
 LL_NODE * MakeLLnode(char * name,AST * data) {
     LL_NODE * l = (LL_NODE*)malloc(sizeof(LL_NODE));
-    int len = strlen(name);
-    strncpy(l->name, name + 1, len - 2);
-    l->data = data;
+    strncpy(l->name, name,strlen(name));
+
+    if (data->tag == tag_int) {
+        l->data.i = data->oper.intExp;
+        l->type = type_int;
+    } else if(data->tag == tag_str) {
+        strncpy(l->data.c, data->oper.strExp + 1, strlen(data->oper.strExp)-2);
+        l->type = type_string;
+    } else if(data->tag == tag_var) {
+        strncpy(l->data.c, data->oper.varExp, strlen(data->oper.varExp));
+        l->type = type_variable;
+    }
+
     l->next = NULL;
-    l->type = type_null;
     return l;
 }
 
@@ -65,7 +73,7 @@ void removeLLnode(LL_NODE * head, char * name) {
         temp = temp->next;
     }
     prev->next = temp->next;
-    FreeLLIST_one(temp);
+    free(temp);
     
 }
 
@@ -74,7 +82,9 @@ AST * getLLdata(LL_NODE * head, char* name) {
     while (!match(node->name, name) && node->next != NULL){
         node = node->next;
     }
-    if (match(node->name, name)) return node->data;
+    if (node->type) {
+        
+    }
     return NULL;
 }
 
@@ -86,16 +96,11 @@ LL_NODE * appendLLnode(LL_NODE * head, char * name, AST * data) {
 }
 
 
-void FreeLLIST_one(LL_NODE * l) {
-    l->next = NULL;
-    l->data->inSymbol=false; // this func is only for AST llists
-    FreeAST(l->data);
-    free(l);
-}
+
 
 void FreeLLIST_all(LL_NODE * l) {
     if (l->next != NULL) FreeLLIST_all(l->next);
-    FreeLLIST_one(l); 
+    free(l); 
 }
 
 
@@ -167,7 +172,7 @@ void test_hashes_on_keywords(){
     fclose(keystream);
 }
 
-unsigned long hash(char * str) { //adler-32
+unsigned long hash(char * str) {
     
     int i;
     int len = strlen(str);
@@ -182,4 +187,3 @@ unsigned long hash(char * str) { //adler-32
     
     return (b>>16) | a;
 }
-

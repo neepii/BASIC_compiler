@@ -24,9 +24,15 @@
 
 typedef struct ll_node {
     char name[AST_STR_LEN];
-    AST * data;
+    union {
+        double f;
+        long long i;
+        char c[64];
+    } data;
     enum {
-        type_literal,
+        type_int,
+        type_float,
+        type_string,
         type_variable,
         type_null
     } type;
@@ -49,7 +55,12 @@ AST * getLLdata(LL_NODE * head, char* name);
 LL_NODE * appendLLnode(LL_NODE * head, char * name, AST * data);
 void FreeLLIST_one(LL_NODE * l);
 void FreeLLIST_all(LL_NODE * l);
+
+/*
+    adler-32
+*/
 unsigned long hash(char * str);
+
 void test_hashes_on_keywords();
 void introduce_s_table();
 void add_symbol(char * name, AST * data);
