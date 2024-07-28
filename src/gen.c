@@ -4,6 +4,8 @@
 FILE * tar;
 int stackpos = 0;
 AST** statements;
+char * temp_name;
+
 
 #define REG_AX 1 << 0
 #define REG_BX 1 << 1
@@ -131,7 +133,8 @@ static void put(char * format, ...) {
 }
 
 void make_target_src() { //my brain hurts
-    tar = fopen("XXX0808.s", "w"); 
+
+    tar = fopen(temp_name, "w"); 
     put(".code64");
     fprintf(tar,".section .data\n"); 
     data_section();
@@ -140,4 +143,18 @@ void make_target_src() { //my brain hurts
     fprintf(tar, "_start:\n");
     start();
     fclose(tar);
+}
+
+void compile(char * output_name)  {
+
+    char as[100];
+    char ld[100];
+    char rm[100];
+
+    sprintf(as, "as %s -o %s.o", temp_name, output_name);
+    sprintf(ld, "ld %s.o -o %s", output_name, output_name);
+    sprintf(rm, "rm -rf %s.o", output_name);
+    system(as);
+    system(ld);
+    system(rm);
 }

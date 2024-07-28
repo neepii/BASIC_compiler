@@ -1,20 +1,41 @@
 #include "basicc.h"
-#include "parse.h"
-#include "hash.h"
 
 #define STATEMENTS_SIZE 50
 
+
 int main(int argc, char  *argv[])
 {
+    char output_name[50] = "a.out";
+    char source_name[50] = {0};
+    temp_name = (char *) malloc(sizeof(char) * 50);
+    strcpy(temp_name,"/tmp/XXX08080.s");
     if (argc == 1) {
         printf("No arguments\n");
         exit(1);
     }
-    if (match(argv[1], "--test-hash")) {
-        test_hashes_on_keywords();
-        return 0;
+    for (int i = 1; i < argc; i++)
+    {
+        if (match(argv[i], "--test-hash")) {
+            test_hashes_on_keywords();
+            return 0;
+        }
+        else if (match(argv[i], "-o") && argv[i+1]) {
+            strcpy(output_name, argv[i+1]);
+            i++;
+        }
+        else if (match(argv[i], "--debug")) {
+            strcpy(temp_name, "XXX08080.s");
+        }
+        else {
+            strcpy(source_name, argv[i]);
+        }
     }
-    FILE * src = fopen(argv[1], "r");
+    
+    if (!source_name[0]) {
+        parse_error("no source file");
+        exit(1);
+    }
+    FILE * src = fopen(source_name, "r");
     if (!src) {
         perror("ERROR");
         exit(1);
@@ -42,6 +63,7 @@ int main(int argc, char  *argv[])
     }
 
     make_target_src();
+    compile(output_name);
 
     for (int j = 0; j < i; j++)
     {
@@ -50,6 +72,7 @@ int main(int argc, char  *argv[])
         
 
     free(statements);
+    free(temp_name);
     freeTokensArr();
     free_s_table();
     fclose(src);

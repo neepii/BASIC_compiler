@@ -2,5 +2,6 @@
 #define GEN_H_
 
 void make_target_src();
+void compile(char * output_name);
 
 #endif
