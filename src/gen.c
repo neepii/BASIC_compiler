@@ -73,7 +73,7 @@ static void end_stack_frame() {
 
 static void start() {
     int i= 0;
-    
+    fprintf(tar, "_start:\n");
     new_stack_frame();
     while (statements[i]) {
         AST * node = statements[i];
@@ -85,7 +85,7 @@ static void start() {
             switch (switch_h)
             {
             case PRINT_H:
-                new_stack_frame();
+
                 put("");
                 int id = node->oper.commonExp.arg->oper.symbol;
                 int ind = S_TABLE->inds[id];
@@ -96,7 +96,6 @@ static void start() {
                 multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "1", len, str, "1");
                 put("syscall");
                 put("");
-                end_stack_frame();
                 break;
             
             default:
@@ -140,7 +139,7 @@ void make_target_src() { //my brain hurts
     data_section();
     fprintf(tar,".global _start\n"); 
     fprintf(tar, ".section .text\n");
-    fprintf(tar, "_start:\n");
+    include("src/funcs.inc");
     start();
     fclose(tar);
 }
@@ -157,4 +156,15 @@ void compile(char * output_name)  {
     system(as);
     system(ld);
     system(rm);
+}
+void include(char * path) {
+    FILE * fp = fopen(path, "r");
+    char line[50];
+    while(1) {
+        fgets(line,50,fp);
+        if (feof(fp)) break;
+        fprintf(tar, "%s",line);
+    }
+
+    fclose(fp);
 }
