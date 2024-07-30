@@ -418,6 +418,8 @@ AST * parse_arith_expression() {
 
 
 
+
+
 AST * parse_AST() { // lvl starts with 0
     if (tokInd == tokLen) {
         return NULL;
@@ -447,6 +449,8 @@ AST * parse_AST() { // lvl starts with 0
         return parse_WhileStatementExp();
     case WEND_H:
         return parse_WendStatementExp();
+    case REM_H:
+        return parse_OneWordStatementExp("REM");
     default:
         return parse_AssignExp();
 

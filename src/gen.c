@@ -100,6 +100,8 @@ static void start() {
         int ind, id;
         switch (switch_h)
         {
+        case REM_H:
+            break;
         case PRINT_H:
 
             put("");

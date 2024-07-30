@@ -23,6 +23,7 @@
 #define NEXT_H 319
 #define CLS_H 226
 #define END_H 215
+#define REM_H 228
 
 #define MAX_TOKENS_IN_LINE 20
 #define TOKEN_LEN 20
