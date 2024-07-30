@@ -2,10 +2,11 @@
 #include <stdarg.h>
 #include "parse.h"
 FILE * tar;
-int stackpos = 0;
+unsigned int stackpos = 0;
 AST** statements;
 char * temp_name;
-
+unsigned int frameArr[50] = {0};
+unsigned int frameInt = 0;
 
 #define REG_AX 1 << 0
 #define REG_BX 1 << 1
@@ -28,12 +29,15 @@ char * temp_name;
 static void put(char * format, ...);
 static void pop(char * str);
 static void push(char * str);
+static void call(char * str);
 
 
 
 
 static void data_section() {
     int ind = 0;
+    put(".lcomm digitspace, 8");
+    put(".lcomm bytestorage, 1");
     for (int i = 0; i < S_TABLE_SIZE; i++)
     {
         if (S_TABLE->inds[i] == -1) break;   
@@ -51,24 +55,35 @@ static void data_section() {
 static void multi_mov(int regs, ...) {
     va_list va;
     va_start(va, regs);
-    if (regs & REG_AX) put("mov $%s, %%rax", va_arg(va, char*));
-    if (regs & REG_BX) put("mov $%s, %%rbx", va_arg(va, char*));
-    if (regs & REG_CX) put("mov $%s, %%rcx", va_arg(va, char*));
-    if (regs & REG_DX) put("mov $%s, %%rdx", va_arg(va, char*));
-    if (regs & REG_SI) put("mov $%s, %%rsi", va_arg(va, char*));
-    if (regs & REG_DI) put("mov $%s, %%rdi", va_arg(va, char*));
-    if (regs & REG_SP) put("mov $%s, %%rsp", va_arg(va, char*));
-    if (regs & REG_BP) put("mov $%s, %%rbp", va_arg(va, char*));
+    if (regs & REG_AX) put("mov %s, %%rax", va_arg(va, char*));
+    if (regs & REG_BX) put("mov %s, %%rbx", va_arg(va, char*));
+    if (regs & REG_CX) put("mov %s, %%rcx", va_arg(va, char*));
+    if (regs & REG_DX) put("mov %s, %%rdx", va_arg(va, char*));
+    if (regs & REG_SI) put("mov %s, %%rsi", va_arg(va, char*));
+    if (regs & REG_DI) put("mov %s, %%rdi", va_arg(va, char*));
+    if (regs & REG_SP) put("mov %s, %%rsp", va_arg(va, char*));
+    if (regs & REG_BP) put("mov %s, %%rbp", va_arg(va, char*));
     va_end(va);
 }
 
 static void new_stack_frame() {
     push("%rbp");
-    put("mov %%rsp, %%rbp");    
+    put("mov %%rsp, %%rbp");
+    stackpos += 8;
+    if ((frameInt + 1) > 50) {
+        perror("stack overflow");
+    }
+    frameArr[++frameInt] = stackpos;
+
 }
 static void end_stack_frame() {
     put("mov %%rsp, %%rbp");
     pop("%rbp");
+    stackpos -= 8;
+    frameInt--;
+}
+unsigned int cur_frame() {
+    return frameArr[frameInt];
 }
 
 static void start() {
@@ -76,41 +91,63 @@ static void start() {
     fprintf(tar, "_start:\n");
     new_stack_frame();
     while (statements[i]) {
-        AST * node = statements[i];
-        if (node->tag == tag_numline) node = node->oper.numline.next;
-        switch (node->tag)
+    AST * node = statements[i];
+    if (node->tag == tag_numline) node = node->oper.numline.next;
+    switch (node->tag)
+    {
+    case tag_common_statement:
+        int switch_h = hash(node->oper.commonExp.name);
+        int ind, id;
+        switch (switch_h)
         {
-        case tag_common_statement:
-            int switch_h = hash(node->oper.commonExp.name);
-            switch (switch_h)
-            {
-            case PRINT_H:
+        case PRINT_H:
 
-                put("");
-                int id = node->oper.commonExp.arg->oper.symbol;
-                int ind = S_TABLE->inds[id];
-                char str[50] = {0};
-                char len[25] = {0};
-                sprintf(str, "str%d", id);
-                sprintf(len, "%ld", strlen(S_TABLE->list[ind]->data.c)+1);
-                multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "1", len, str, "1");
-                put("syscall");
-                put("");
-                break;
-            
-            default:
-                break;
+            put("");
+            id = node->oper.commonExp.arg->oper.symbol;
+            ind = S_TABLE->inds[id];
+            char str[50] = {0};
+            char len[25] = {0};
+            if (S_TABLE->list[ind]->type == type_string) {
+                sprintf(str, "$str%d", id);
+                sprintf(len, "$%ld", strlen(S_TABLE->list[ind]->data.c)+1);
+                multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "$1", len, str, "$1");
+
+            } else if (S_TABLE->list[ind]->type == type_int) {
+                sprintf(str, "-%d(%%rbp)", S_TABLE->list[ind]->data.addr);
+                multi_mov(REG_AX | REG_DI, "$digitspace", str);
+                call("uitoa");
+                put("mov %%rax, %%rdx");
+                multi_mov(REG_AX | REG_SI | REG_DI, "$1", "$digitspace", "$1");
             }
-        
+            put("syscall");
+            call("newline");
+            break;
+
+        case LET_H:
+            put("");
+            AST * temp = node->oper.commonExp.arg;
+            id = temp->oper.assignExp.identifier->oper.symbol;
+            ind = S_TABLE->inds[id];
+            stackpos += 4;
+            put("movl $%d, -%d(%%rbp)",temp->oper.assignExp.value->oper.intExp ,stackpos-cur_frame());
+            S_TABLE->list[ind]->data.addr = stackpos - cur_frame();
+            break;
+        case END_H:
+            put("");
+            end_stack_frame();
+            multi_mov(REG_AX | REG_DI, "$60", "$0");
+            put("syscall");
         default:
             break;
         }
-        i++;
+    
+    default:
+        break;
     }
-    end_stack_frame();
+    i++;
+    }
     put("");
-    multi_mov(REG_AX | REG_DI, "60", "0");
-    put("syscall");
+
 }
 
 static void push(char * str) {
@@ -119,6 +156,10 @@ static void push(char * str) {
 
 static void pop(char* str) {
     put("pop %s", str);
+}
+
+static void call(char* str) {
+    put("call %s", str);
 }
 
 static void put(char * format, ...) {

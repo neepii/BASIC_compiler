@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include "parse.h"
 #define HASH_MOD 65521
-#define S_TABLE_SIZE 512
+#define S_TABLE_SIZE 64
 
 
 //output of test-hash
@@ -28,6 +28,7 @@ typedef struct ll_node {
         double f;
         long long i;
         char c[64];
+        unsigned int addr;
     } data;
     enum {
         type_int,
@@ -53,8 +54,8 @@ LL_NODE * MakeLLnode(char * name,AST * data);
 void removeLLnode(LL_NODE * head, char * name);
 AST * getLLdata(LL_NODE * head, char* name);
 LL_NODE * appendLLnode(LL_NODE * head, char * name, AST * data);
-void FreeLLIST_one(LL_NODE * l);
 void FreeLLIST_all(LL_NODE * l);
+hashmap * create_table();
 
 /*
     adler-32
@@ -63,6 +64,6 @@ unsigned long hash(char * str);
 
 void test_hashes_on_keywords();
 void introduce_s_table();
-void add_symbol(char * name, AST * data);
+void add_symbol(AST * data);
 
 #endif

@@ -1,6 +1,16 @@
-
 #;rax - buffer
 #;rdi - dword (a integer to convert)
+
+newline:
+	mov $10, %rax
+	mov %rax, (bytestorage)
+	mov $1, %rax
+	mov $1, %rdi
+	mov $1, %rdx
+	mov $bytestorage, %rsi
+	syscall
+	ret
+
 uitoa:
 	movq %rax, %rsi
 

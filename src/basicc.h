@@ -11,9 +11,6 @@
 #include "hash.h"
 #include "token.h"
 #include "gen.h"
-#define HASH_MOD 65521
-#define S_TABLE_SIZE 512
-
 
 //output of test-hash
 #define LET_H 229

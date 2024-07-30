@@ -4,18 +4,24 @@ int min_available_id = 0;
 
 
 
-hashmap * S_TABLE = NULL;
+hashmap * S_TABLE = NULL; //global
 
 void introduce_s_table() {
-  S_TABLE = (hashmap*) malloc(sizeof(hashmap));
-  S_TABLE->list = (LL_NODE**) malloc(sizeof(LL_NODE*) * S_TABLE_SIZE);
+  S_TABLE = create_table();
+}
+
+hashmap * create_table() {
+  hashmap * hm;
+  hm = (hashmap*) malloc(sizeof(hashmap));
+  hm->list = (LL_NODE**) malloc(sizeof(LL_NODE*) * S_TABLE_SIZE);
   for (int i = 0; i < S_TABLE_SIZE; i++)
   {
-    S_TABLE->list[i] = NULL;
-    S_TABLE->inds[i] = -1;
+    hm->list[i] = NULL;
+    hm->inds[i] = -1;
   }
-
+  return hm;
 }
+
 
 void free_s_table() {
     for (int i = 0; i < S_TABLE_SIZE; i++)
@@ -31,16 +37,28 @@ void free_s_table() {
     
 }
 
-void add_symbol(char * name,AST * data) {
-  int index = (int) hash(name) % S_TABLE_SIZE;
-  S_TABLE->list[index] = appendLLnode(S_TABLE->list[index], name, data);
-  S_TABLE->inds[min_available_id] = index;
-  data->oper.symbol = min_available_id;
-  data->tag = tag_symbol;
-  min_available_id++;
+void add_symbol(AST * data) {
+    char name[TOKEN_LEN];
+    if (data->tag == tag_assign) {
+        strcpy(name, data->oper.assignExp.identifier->oper.varExp);
+    } else if (data->tag == tag_str) {
+        sprintf(name, "str%d", min_available_id);
+    }
+    int index = (int) hash(name) % S_TABLE_SIZE;
+    S_TABLE->list[index] = appendLLnode(S_TABLE->list[index], name, data);
+    S_TABLE->inds[min_available_id] = index;
+    if (data->tag == tag_assign) {
+        data->oper.assignExp.identifier->oper.symbol = min_available_id;
+        data->oper.assignExp.identifier->tag = tag_symbol;
+    } else {
+        data->oper.symbol = min_available_id;
+        data->tag = tag_symbol;
+    }
+    min_available_id++;
 }
 
 LL_NODE * MakeLLnode(char * name,AST * data) {
+
     LL_NODE * l = (LL_NODE*)malloc(sizeof(LL_NODE));
     strncpy(l->name, name,strlen(name));
 

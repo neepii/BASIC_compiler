@@ -170,7 +170,15 @@ AST * parse_ClsStatementExp() {
 AST * parse_PrintStatementExp() {
     char * str = next_token();
     AST * node = parse_CommonExp(parse_leaf, "PRINT");
-    add_symbol(str, node->oper.commonExp.arg);
+    if (isSTRING(str)) {
+        add_symbol(node->oper.commonExp.arg);
+    } else if (isVAR(str)) {
+        int h = (int) hash(str) % S_TABLE_SIZE;
+        int id = S_TABLE->list[h]->id;
+        node->oper.commonExp.arg->oper.symbol = id;
+        node->oper.commonExp.arg->tag = tag_symbol;
+    }
+    
     return node;
 }
 AST * parse_LetStatementExp() {
@@ -292,10 +300,7 @@ AST * parse_AssignExp() {
     }
     node->oper.assignExp.identifier = identifier;
     node->oper.assignExp.value = value;
-
-
-    add_symbol(identifier->oper.varExp, value);
-    S_TABLE->list[S_TABLE->inds[min_available_id-1]]->type = type_variable;
+    add_symbol(node);
 
     return node;
 }
