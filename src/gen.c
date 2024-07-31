@@ -8,6 +8,7 @@ char * temp_name;
 unsigned int frameArr[50] = {0};
 unsigned int frameInt = 0;
 
+
 #define REG_AX 1 << 0
 #define REG_BX 1 << 1
 #define REG_CX 1 << 2
@@ -71,7 +72,7 @@ static void new_stack_frame() {
     put("mov %%rsp, %%rbp");
     stackpos += 8;
     if ((frameInt + 1) > 50) {
-        perror("stack overflow");
+        fprintf(stderr, "stack overflow\n");
     }
     frameArr[++frameInt] = stackpos;
 
@@ -86,8 +87,62 @@ unsigned int cur_frame() {
     return frameArr[frameInt];
 }
 
+bool handle_common_statements(AST * node) {
+    int switch_h = hash(node->oper.commonExp.name);
+    int ind, id;
+    switch (switch_h) {
+    case REM_H:
+        break;
+    case PRINT_H:
+
+        put("");
+        id = node->oper.commonExp.arg->oper.symbol;
+        ind = S_TABLE->inds[id];
+        char str[50] = {0};
+        char len[25] = {0};
+        if (S_TABLE->list[ind]->type == type_string) {
+            sprintf(str, "$str%d", id);
+            sprintf(len, "$%ld", strlen(S_TABLE->list[ind]->data.c)+1);
+            multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "$1", len, str, "$1");
+
+        } else if (S_TABLE->list[ind]->type == type_int) {
+            sprintf(str, "-%d(%%rbp)", S_TABLE->list[ind]->data.addr);
+            multi_mov(REG_AX | REG_DI, "$digitspace", str);
+            call("uitoa");
+            put("mov %%rax, %%rdx");
+            multi_mov(REG_AX | REG_SI | REG_DI, "$1", "$digitspace", "$1");
+        }
+        put("syscall");
+        call("newline");
+        break;
+    case GOTO_H:
+        put("jmp goto%d", node->oper.commonExp.arg->oper.intExp);
+        break;
+
+    case LET_H:
+        put("");
+        AST * temp = node->oper.commonExp.arg;
+        id = temp->oper.assignExp.identifier->oper.symbol;
+        ind = S_TABLE->inds[id];
+        stackpos += 4;
+        put("movl $%d, -%d(%%rbp)",temp->oper.assignExp.value->oper.intExp ,stackpos-cur_frame());
+        S_TABLE->list[ind]->data.addr = stackpos - cur_frame();
+        break;
+    case END_H:
+        put("");
+        end_stack_frame();
+        multi_mov(REG_AX | REG_DI, "$60", "$0");
+        put("syscall");
+        return true;
+    default:
+        break;
+    }
+    return false;
+}
+
 static void start() {
     int i= 0;
+    bool hasEnd = false;
     fprintf(tar, "_start:\n");
     new_stack_frame();
     while (statements[i]) {
@@ -102,61 +157,15 @@ static void start() {
     switch (node->tag)
     {
     case tag_common_statement:
-        int switch_h = hash(node->oper.commonExp.name);
-        int ind, id;
-        switch (switch_h)
-        {
-        case REM_H:
-            break;
-        case PRINT_H:
+        hasEnd = handle_common_statements(node);
 
-            put("");
-            id = node->oper.commonExp.arg->oper.symbol;
-            ind = S_TABLE->inds[id];
-            char str[50] = {0};
-            char len[25] = {0};
-            if (S_TABLE->list[ind]->type == type_string) {
-                sprintf(str, "$str%d", id);
-                sprintf(len, "$%ld", strlen(S_TABLE->list[ind]->data.c)+1);
-                multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "$1", len, str, "$1");
-
-            } else if (S_TABLE->list[ind]->type == type_int) {
-                sprintf(str, "-%d(%%rbp)", S_TABLE->list[ind]->data.addr);
-                multi_mov(REG_AX | REG_DI, "$digitspace", str);
-                call("uitoa");
-                put("mov %%rax, %%rdx");
-                multi_mov(REG_AX | REG_SI | REG_DI, "$1", "$digitspace", "$1");
-            }
-            put("syscall");
-            call("newline");
-            break;
-        case GOTO_H:
-            put("jmp goto%d", node->oper.commonExp.arg->oper.intExp);
-            break;
-
-        case LET_H:
-            put("");
-            AST * temp = node->oper.commonExp.arg;
-            id = temp->oper.assignExp.identifier->oper.symbol;
-            ind = S_TABLE->inds[id];
-            stackpos += 4;
-            put("movl $%d, -%d(%%rbp)",temp->oper.assignExp.value->oper.intExp ,stackpos-cur_frame());
-            S_TABLE->list[ind]->data.addr = stackpos - cur_frame();
-            break;
-        case END_H:
-            put("");
-            end_stack_frame();
-            multi_mov(REG_AX | REG_DI, "$60", "$0");
-            put("syscall");
-        default:
-            break;
-        }
-    
     default:
         break;
     }
     i++;
     }
+    if (!hasEnd) fprintf(stderr, "ERROR: no end statement\n");
+    
     put("");
 
 }

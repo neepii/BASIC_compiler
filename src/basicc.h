@@ -33,5 +33,6 @@ extern int tokInd;
 extern int tokLen;
 extern char * temp_name;
 extern AST** statements;
+extern bool hasEnd;
 
 #endif

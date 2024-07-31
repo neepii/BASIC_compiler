@@ -374,6 +374,7 @@ void parse_syntax_error(char *str) {
 }
 
 
+
 bool compare_prec(int new_prec, int prec) { // is the new prec smaller then the old one?
     if (new_prec == -1 || prec == -1) return false;
     else if (new_prec <= prec) return true;

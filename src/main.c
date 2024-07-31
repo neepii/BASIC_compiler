@@ -5,6 +5,7 @@
 
 int main(int argc, char  *argv[])
 {
+
     char output_name[50] = "a.out";
     char source_name[50] = {0};
     temp_name = (char *) malloc(sizeof(char) * 50);
@@ -61,6 +62,7 @@ int main(int argc, char  *argv[])
     {
         printParsedLine(statements[j]);
     }
+
 
     make_target_src();
     compile(output_name);
