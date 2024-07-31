@@ -43,6 +43,8 @@ void add_symbol(AST * data) {
         strcpy(name, data->oper.assignExp.identifier->oper.varExp);
     } else if (data->tag == tag_str) {
         sprintf(name, "str%d", min_available_id);
+    } else if (data->tag == tag_var) {
+        sprintf(name, "%s", data->oper.varExp);
     }
     int index = (int) hash(name) % S_TABLE_SIZE;
     S_TABLE->list[index] = appendLLnode(S_TABLE->list[index], name, data);

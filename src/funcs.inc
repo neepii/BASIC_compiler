@@ -11,6 +11,23 @@ newline:
 	syscall
 	ret
 
+#;rax - buffer address
+#;return in rax
+strlen:
+	mov %rax, %rcx
+strlen_loop:
+	xor %rbx, %rbx
+	movb (%rax), %bl
+	cmp $0, %rbx
+	jz strlen_end
+	inc %eax
+	jmp strlen_loop
+strlen_end:
+	sub %rax, %rcx
+	dec %rax
+	ret
+
+
 uitoa:
 	movq %rax, %rsi
 

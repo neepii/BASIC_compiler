@@ -185,7 +185,9 @@ AST * parse_LetStatementExp() {
     return parse_CommonExp(parse_AssignExp, "LET");
 }
 AST * parse_InputStatementExp() {
-    return parse_CommonExp(parse_VarExp, "INPUT");
+    AST *node =  parse_CommonExp(parse_VarExp, "INPUT");
+    add_symbol(node->oper.commonExp.arg);
+    return node;
 }
 AST * parse_WhileStatementExp() {
     return parse_CommonExp(parse_arith_expression, "WHILE");
@@ -372,7 +374,6 @@ void parse_syntax_error(char *str) {
     fprintf(stderr, "syntax error: %s\n", str);
     exit_code = 1;   
 }
-
 
 
 bool compare_prec(int new_prec, int prec) { // is the new prec smaller then the old one?

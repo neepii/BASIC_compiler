@@ -39,6 +39,7 @@ static void data_section() {
     int ind = 0;
     put(".lcomm digitspace, 8");
     put(".lcomm bytestorage, 1");
+    put(".lcomm stringspace, 32");
     for (int i = 0; i < S_TABLE_SIZE; i++)
     {
         if (S_TABLE->inds[i] == -1) break;   
@@ -90,15 +91,16 @@ unsigned int cur_frame() {
 bool handle_common_statements(AST * node) {
     int switch_h = hash(node->oper.commonExp.name);
     int ind, id;
+    AST * arg = node->oper.commonExp.arg;
     switch (switch_h) {
     case REM_H:
         break;
     case PRINT_H:
 
         put("");
-        id = node->oper.commonExp.arg->oper.symbol;
+        id = arg->oper.symbol;
         ind = S_TABLE->inds[id];
-        char str[50] = {0};
+        char str[64] = {0};
         char len[25] = {0};
         if (S_TABLE->list[ind]->type == type_string) {
             sprintf(str, "$str%d", id);
@@ -111,21 +113,33 @@ bool handle_common_statements(AST * node) {
             call("uitoa");
             put("mov %%rax, %%rdx");
             multi_mov(REG_AX | REG_SI | REG_DI, "$1", "$digitspace", "$1");
+        } else if (S_TABLE->list[ind]->type == type_pointer_var) {
+            put("mov $stringspace, %%rax");
+            call("strlen");
+            put("mov %%rax, %%rdx");
+            sprintf(str, "%s", S_TABLE->list[ind]->data.c);
+            multi_mov(REG_AX | REG_SI | REG_DI, "$1", str, "$1");
         }
         put("syscall");
         call("newline");
         break;
     case GOTO_H:
-        put("jmp goto%d", node->oper.commonExp.arg->oper.intExp);
+        put("jmp goto%d",arg->oper.intExp);
         break;
-
+    case INPUT_H:
+        id = arg->oper.symbol;
+        ind = S_TABLE->inds[id];
+        multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "$0", "$32", "$stringspace", "$0");
+        put("syscall");
+        strncpy(S_TABLE->list[ind]->data.c, "$stringspace", 13);
+        S_TABLE->list[ind]->type = type_pointer_var;
+        break;
     case LET_H:
         put("");
-        AST * temp = node->oper.commonExp.arg;
-        id = temp->oper.assignExp.identifier->oper.symbol;
+        id = arg->oper.assignExp.identifier->oper.symbol;
         ind = S_TABLE->inds[id];
         stackpos += 4;
-        put("movl $%d, -%d(%%rbp)",temp->oper.assignExp.value->oper.intExp ,stackpos-cur_frame());
+        put("movl $%d, -%d(%%rbp)",arg->oper.assignExp.value->oper.intExp ,stackpos-cur_frame());
         S_TABLE->list[ind]->data.addr = stackpos - cur_frame();
         break;
     case END_H:

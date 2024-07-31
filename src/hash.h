@@ -35,6 +35,7 @@ typedef struct ll_node {
         type_float,
         type_string,
         type_variable,
+        type_pointer_var,
         type_null
     } type;
     unsigned int id;

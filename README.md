@@ -1,1 +1,1 @@
-Translates BASIC to C. WIP.
+Translates BASIC to ASM. WIP.
