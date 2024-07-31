@@ -37,6 +37,7 @@ typedef struct exp
         } assignExp;
         struct {
             int value;
+            bool isGotoLabel;
             struct exp * next;
         } numline;
         struct {

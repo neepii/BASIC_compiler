@@ -92,7 +92,13 @@ static void start() {
     new_stack_frame();
     while (statements[i]) {
     AST * node = statements[i];
-    if (node->tag == tag_numline) node = node->oper.numline.next;
+    if (node->tag == tag_numline && node->oper.numline.isGotoLabel) {
+        fprintf(tar, "goto%d:", node->oper.numline.value);
+        node = node->oper.numline.next;
+    }
+    else if (node->tag == tag_numline) {   
+        node = node->oper.numline.next;
+    }
     switch (node->tag)
     {
     case tag_common_statement:
@@ -123,6 +129,9 @@ static void start() {
             }
             put("syscall");
             call("newline");
+            break;
+        case GOTO_H:
+            put("jmp goto%d", node->oper.commonExp.arg->oper.intExp);
             break;
 
         case LET_H:

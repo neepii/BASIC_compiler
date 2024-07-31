@@ -196,6 +196,18 @@ AST * parse_WendStatementExp() {
 AST * parse_NextStatementExp() {
     return parse_CommonExp(parse_VarExp, "NEXT");
 }
+AST * parse_GotoStatementExp() {
+    AST * node = parse_CommonExp(parse_IntExp, "GOTO");
+    int num = node->oper.commonExp.arg->oper.intExp;
+    for (int i = 0;; i++)
+    {
+        if (statements[i]->tag == tag_numline && statements[i]->oper.numline.value == num){ // what if theres no numline?
+            statements[i]->oper.numline.isGotoLabel=true;
+            break;
+        }
+    }
+    return node;
+}
 
 
 AST * AllocNode() {
@@ -282,6 +294,7 @@ AST * parse_NumLineExp() {
     node->oper.intExp = atoi(cur_token());
     get_next_token();
     node->oper.numline.next = parse_AST();
+    node->oper.numline.isGotoLabel = false;
     return node;
 }
 
@@ -431,29 +444,18 @@ AST * parse_AST() { // lvl starts with 0
     if (match(cur_token(), "")) return NULL;
     switch (t)
     {
-    case LET_H:
-        return parse_LetStatementExp();
-    case PRINT_H:
-        return parse_PrintStatementExp();
-    case INPUT_H:
-        return parse_InputStatementExp();
-    case END_H:
-        return parse_EndStatementExp();
-    case IF_H:
-        return parse_IfStatementExp();
-    case FOR_H:
-        return parse_ForStatementExp();
-    case NEXT_H:
-        return parse_NextStatementExp();
-    case WHILE_H:
-        return parse_WhileStatementExp();
-    case WEND_H:
-        return parse_WendStatementExp();
-    case REM_H:
-        return parse_OneWordStatementExp("REM");
-    default:
-        return parse_AssignExp();
-
+    case LET_H: return parse_LetStatementExp();
+    case PRINT_H: return parse_PrintStatementExp();
+    case INPUT_H: return parse_InputStatementExp();
+    case END_H: return parse_EndStatementExp();
+    case IF_H: return parse_IfStatementExp();
+    case FOR_H: return parse_ForStatementExp();
+    case NEXT_H: return parse_NextStatementExp();
+    case WHILE_H: return parse_WhileStatementExp();
+    case WEND_H: return parse_WendStatementExp();
+    case REM_H: return parse_OneWordStatementExp("REM");
+    case GOTO_H: return parse_GotoStatementExp();
+    default: return parse_AssignExp();
     }
     
     return NULL;
