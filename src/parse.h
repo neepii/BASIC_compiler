@@ -5,7 +5,7 @@
 
 
 
-typedef enum {
+enum statement {
     op_print,
     op_input,
     op_let,
@@ -19,7 +19,20 @@ typedef enum {
     op_next,
     op_cls,
     op_goto
-} statement;
+};
+
+enum operator {
+    op_plus,        // "+"
+    op_minus,       // "-"
+    op_mul,         // "*"
+    op_div,         // "/"
+    op_less,        // "<"
+    op_greater,     // ">"
+    op_less_eq,     // "<="
+    op_greater_eq,  // ">="
+    op_equal,       // "="  
+    op_not_eq      // "<>" "><"
+};
 
 typedef struct exp AST;
 
@@ -59,11 +72,11 @@ typedef struct exp
         struct {
             struct exp* left;
             struct exp* right;
-            char operator[AST_STR_LEN];
+            enum operator operator;
         } binaryExp;
         struct {
             struct exp* operand;
-            char operator[AST_STR_LEN];
+            enum operator operator;
         } unaryExp;
         struct {
             char name[AST_STR_LEN];
@@ -80,10 +93,10 @@ typedef struct exp
             struct exp* step;
         } forstatementExp;
         struct {
-            statement stmt;
+            enum statement stmt;
             struct exp* arg;
         } commonExp;
-        statement one_word_stmt;
+        enum statement one_word_stmt;
     }oper;
     bool inSymbol;
 } AST;

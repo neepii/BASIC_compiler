@@ -27,10 +27,62 @@ static AST * parse_AssignExp();
 static AST * parse_VarExp();
 static AST * parse_arith_expression();
 static AST * parse_leaf();
-static int get_predecense(char * op);
+static int get_predecense(int op);
 static bool compare_prec(int new_prec, int prec);
 static AST * iter_parse_exp(int min_prec);
 static AST * recursive_parse_exp(AST * left, int min_prec);
+
+static void print_op(int op) {
+    switch (op)
+    {
+    case op_plus:
+        printf("+");
+        break;
+    case op_minus:
+        printf("-");
+        break;
+    case op_mul:
+        printf("*");
+        break;
+    case op_div:
+        printf("/");
+        break;
+    case op_equal:
+        printf("=");
+        break;
+    default:
+        break;
+    }
+}
+
+static void print_stmt(int stmt) {
+    switch (stmt)
+        {
+        case op_print:
+            printf("PRINT");
+            break;
+        case op_input:
+            printf("INPUT");
+            break;
+        case op_end:
+            printf("END");
+            break;
+        case op_rem:
+            printf("REM");
+            break;
+        case op_dim:
+            printf("DIM");
+            break;
+        case op_next:
+            printf("NEXT");
+            break;
+        case op_goto:
+            printf("GOTO");
+            break;
+        default:
+            break;
+    }
+}
 
 void printAST(AST * ast) {
     if (ast == NULL) {
@@ -60,32 +112,7 @@ void printAST(AST * ast) {
         printf("%s", ast->oper.strExp);
         break;
     case tag_common_statement:
-        switch (ast->oper.commonExp.stmt)
-        {
-        case op_print:
-            printf("PRINT");
-            break;
-        case op_input:
-            printf("INPUT");
-            break;
-        case op_end:
-            printf("END");
-            break;
-        case op_rem:
-            printf("REM");
-            break;
-        case op_dim:
-            printf("DIM");
-            break;
-        case op_next:
-            printf("NEXT");
-            break;
-        case op_goto:
-            printf("GOTO");
-            break;
-        default:
-            break;
-        }
+        print_stmt(ast->oper.commonExp.stmt);
         printAST(ast->oper.commonExp.arg);
         break;
     case tag_one_word_statement:
@@ -113,7 +140,7 @@ void printAST(AST * ast) {
         break;
     case tag_binary:
         printAST(ast->oper.binaryExp.left);
-        printf("%s", ast->oper.binaryExp.operator);
+        print_op(ast->oper.binaryExp.operator);
         printAST(ast->oper.binaryExp.right);
         break;
     case tag_for:
@@ -127,7 +154,7 @@ void printAST(AST * ast) {
     // case tag_call:
     //     printf("%s", ast->oper.callExp.name);
     case tag_unary:
-        printf("%s", ast->oper.unaryExp.operator);
+        print_op(ast->oper.unaryExp.operator);
         printAST(ast->oper.unaryExp.operand);
         break;
     default:
@@ -303,11 +330,29 @@ static AST * parse_ForStatementExp() {
 
 // }
 
+static int get_op(char * str) {
+    int h = (int) hash(str);
+    
+    switch (h)
+    {
+    case PLUS_H: return op_plus;
+    case MINUS_H: return op_minus;
+    case MUL_H: return op_mul;
+    case DIV_H: return op_div; 
+    case LESS_H: return op_less; 
+    case GREATER_H: return op_greater;
+    case LS_EQ_H: return op_less_eq;
+    case GR_EQ_H: return op_greater_eq;
+    case EQUAL_H: return op_equal;
+    case NEQUAL_H: return op_not_eq;
+    default: return -1;
+    }
+}
 
 static AST * parse_BinaryExp(AST* left, char * operator, AST* right) {
     AST * node = AllocNode();
     node->tag = tag_binary;
-    strcpy(node->oper.binaryExp.operator,operator);
+    node->oper.binaryExp.operator = get_op(operator);
     node->oper.binaryExp.left = left;
     node->oper.binaryExp.right = right;
     return node;
@@ -316,7 +361,7 @@ static AST * parse_BinaryExp(AST* left, char * operator, AST* right) {
 static AST * parse_UnaryExp(char * operator) {
     AST * node = AllocNode();
     node->tag = tag_unary;
-    strcpy(node->oper.unaryExp.operator,operator);
+    node->oper.unaryExp.operator = get_op(operator);
     node->oper.unaryExp.operand = parse_leaf();
     return node;
 }
@@ -405,21 +450,12 @@ static AST * parse_leaf() {
     return NULL;
 }
 
-static int get_predecense(char * Operator) {
-    if (match(Operator, ">") || //TODO: generalize by creating a function
-        match(Operator, "<")  ||
-        match(Operator, "=") ||
-        match(Operator, "")){
-        return 1;
-    }
+static int get_predecense(int op) {
+    if (op >= 4 || op <= 7)  return 1;
 
-    else if (match(Operator, "+") || match (Operator, "-"))
-    {
-        return 2;
-    }
-    else if(match(Operator,"*") || match(Operator, "/")) {
-        return 3;
-    }
+    else if (op ==0 || op== 1) return 2; // "+" "-"
+
+    else if(op == 2 || op == 3) return 3; // "*" "/"
     else return 0;
 }
 
@@ -473,7 +509,7 @@ static AST * recursive_parse_exp(AST * left, int min_prec) {
     }
     if (!isBINEXP(op)) return left;
 
-    int next_prec = get_predecense(op);
+    int next_prec = get_predecense(get_op(op));
     if (compare_prec(next_prec, min_prec)) return left;
 
     else {
