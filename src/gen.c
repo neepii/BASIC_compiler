@@ -89,14 +89,10 @@ unsigned int cur_frame() {
 }
 
 bool handle_common_statements(AST * node) {
-    int switch_h = hash(node->oper.commonExp.name);
     int ind, id;
     AST * arg = node->oper.commonExp.arg;
-    switch (switch_h) {
-    case REM_H:
-        break;
-    case PRINT_H:
-
+    switch (node->oper.commonExp.stmt) {
+    case op_print:
         put("");
         id = arg->oper.symbol;
         ind = S_TABLE->inds[id];
@@ -121,12 +117,11 @@ bool handle_common_statements(AST * node) {
             multi_mov(REG_AX | REG_SI | REG_DI, "$1", str, "$1");
         }
         put("syscall");
-        call("newline");
         break;
-    case GOTO_H:
+    case op_goto:
         put("jmp goto%d",arg->oper.intExp);
         break;
-    case INPUT_H:
+    case op_input:
         id = arg->oper.symbol;
         ind = S_TABLE->inds[id];
         multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "$0", "$32", "$stringspace", "$0");
@@ -134,7 +129,7 @@ bool handle_common_statements(AST * node) {
         strncpy(S_TABLE->list[ind]->data.c, "$stringspace", 13);
         S_TABLE->list[ind]->type = type_pointer_var;
         break;
-    case LET_H:
+    case op_let:
         put("");
         id = arg->oper.assignExp.identifier->oper.symbol;
         ind = S_TABLE->inds[id];
@@ -142,7 +137,7 @@ bool handle_common_statements(AST * node) {
         put("movl $%d, -%d(%%rbp)",arg->oper.assignExp.value->oper.intExp ,stackpos-cur_frame());
         S_TABLE->list[ind]->data.addr = stackpos - cur_frame();
         break;
-    case END_H:
+    case op_end:
         put("");
         end_stack_frame();
         multi_mov(REG_AX | REG_DI, "$60", "$0");
@@ -152,6 +147,19 @@ bool handle_common_statements(AST * node) {
         break;
     }
     return false;
+}
+static void handle_one_word_statements(AST *node) {
+    switch (node->oper.one_word_stmt)
+    {
+    case op_rem:
+        break;
+    case op_wend:
+        break;
+    
+    
+    default:
+        break;
+    }
 }
 
 static void start() {
@@ -172,7 +180,10 @@ static void start() {
     {
     case tag_common_statement:
         hasEnd = handle_common_statements(node);
-
+        break;
+    case tag_one_word_statement:
+        handle_one_word_statements(node);
+        break;
     default:
         break;
     }

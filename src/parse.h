@@ -5,6 +5,22 @@
 
 
 
+typedef enum {
+    op_print,
+    op_input,
+    op_let,
+    op_rem,
+    op_end,
+    op_if,
+    op_for,
+    op_while,
+    op_dim,
+    op_wend,
+    op_next,
+    op_cls,
+    op_goto
+} statement;
+
 typedef struct exp AST;
 
 typedef struct exp
@@ -64,39 +80,38 @@ typedef struct exp
             struct exp* step;
         } forstatementExp;
         struct {
-            char name[AST_STR_LEN];
+            statement stmt;
             struct exp* arg;
         } commonExp;
-        char oneword_statement[AST_STR_LEN];
+        statement one_word_stmt;
     }oper;
     bool inSymbol;
 } AST;
 
 void printAST(AST* ast);
 AST * AllocNode();
-AST * parse_OneWordStatementExp(char * name);
-AST * parse_EndStatementExp();
-AST * parse_ClsStatementExp();
-AST * parse_BinaryExp(AST* left, char* operator, AST* right);
-AST * parse_UnaryExp(char * operator);
-AST * parse_IntExp();
-AST * parse_StrExp();
-AST * parse_CallExp();
-AST * parse_VarExp();
-AST * parse_AssignExp();
+// AST * parse_OneWordStatementExp(int stmt);
+// AST * parse_EndStatementExp();
+// AST * parse_ClsStatementExp();
+// AST * parse_BinaryExp(AST* left, char* operator, AST* right);
+// AST * parse_UnaryExp(char * operator);
+// AST * parse_IntExp();
+// AST * parse_StrExp();
+// AST * parse_CallExp();
+// AST * parse_VarExp();
+// AST * parse_AssignExp();
 AST * parse_AST();
 void freeTokensArr();
 void allocTokensArr();
 void get_next_token();
 char * cur_token();
 char * next_token();
-AST * parse_arith_expression();
 void printParsedLine(AST * ast);
 void parse_error(char * str);
 void parse_syntax_error(char* str);
 bool match(char*, const char*);
 void FreeAST(AST * ast);
-AST * parse_leaf();
+
 
 
 
