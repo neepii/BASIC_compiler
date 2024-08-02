@@ -49,7 +49,6 @@ int main(int argc, char  *argv[])
     {
         statements[i] = NULL;
     }
-
     int i = 0;
     while (true)
     {
@@ -63,7 +62,6 @@ int main(int argc, char  *argv[])
     {
         printParsedLine(statements[j]);
     }
-    TacArr = (TAC_Entry*) malloc(sizeof(TAC_Entry) * TAC_ENTRIES);
     make_target_src();
     compile(output_name);
 
@@ -73,7 +71,6 @@ int main(int argc, char  *argv[])
     }
     free(statements);
     free(temp_name);
-    free(TacArr);
     freeTokensArr();
     free_s_table();
     fclose(src);

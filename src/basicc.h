@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <ctype.h>
 #include <stdbool.h>
 #include <assert.h>
@@ -39,12 +40,15 @@
 
 #define MAX_TOKENS_IN_LINE 20
 #define TOKEN_LEN 20
+
+#define MAX(a,b) (((a) > (b)) ? (a) : (b))
+#define MIN(a,b) (((a) < (b)) ? (a) : (b))
 extern char ** tokens;
 extern unsigned int tokInd;
 extern unsigned int tokLen;
 extern char * temp_name;
 extern AST** statements;
-extern TAC_Entry * TacArr;
-extern unsigned int TacInd;
+
+
 
 #endif

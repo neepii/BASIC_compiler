@@ -27,7 +27,7 @@ static AST * parse_AssignExp();
 static AST * parse_VarExp();
 static AST * parse_arith_expression();
 static AST * parse_leaf();
-static int get_predecense(int op);
+static int get_predecense(char * op);
 static bool compare_prec(int new_prec, int prec);
 static AST * iter_parse_exp(int min_prec);
 static AST * recursive_parse_exp(AST * left, int min_prec);
@@ -227,9 +227,6 @@ void printParsedLine(AST * tree) {
     printAST(tree);
     printf("\n");
 }
-
-
-
 
 void FreeAST(AST * ast) {
     map_ast(ast, free);
@@ -475,12 +472,11 @@ static AST * parse_leaf() {
     return NULL;
 }
 
-static int get_predecense(int op) {
-    if (op >= 4 || op <= 7)  return 1;
-
-    else if (op ==0 || op== 1) return 2; // "+" "-"
-
-    else if(op == 2 || op == 3) return 3; // "*" "/"
+static int get_predecense(char * s_op) {
+    int op = get_op(s_op);
+    if (op >= 4 && op <= 7)  return 1;
+    else if (op >= 0 && op <= 1) return 2; // "+" "-"
+    else if(op >= 2 && op <= 3) return 3; // "*" "/"
     else return 0;
 }
 
@@ -534,7 +530,7 @@ static AST * recursive_parse_exp(AST * left, int min_prec) {
     }
     if (!isBINEXP(op)) return left;
 
-    int next_prec = get_predecense(get_op(op));
+    int next_prec = get_predecense(op);
     if (compare_prec(next_prec, min_prec)) return left;
 
     else {
@@ -544,15 +540,58 @@ static AST * recursive_parse_exp(AST * left, int min_prec) {
     }
 }
 
-static AST * parse_arith_expression() {
-    if (ParenthesisLvl) parse_syntax_error("non-closed parethesis");
-    return iter_parse_exp(-1);
+static unsigned int ParentCount_AST(AST * node) {
+    if (node->tag != tag_binary) return 0;
+    else {
+        return 1 + ParentCount_AST(node->oper.binaryExp.left) + ParentCount_AST(node->oper.binaryExp.right);
+    }
 }
 
+static AST * parse_arith_expression() {
+    if (ParenthesisLvl) parse_syntax_error("non-closed parethesis");
+    AST * exp =  iter_parse_exp(-1);
+    TAC_Entry * tac = ASTtoTAC(exp);
+    return exp;
+}
 
+char * FillTac(AST * ast, TAC_Entry * tac, char * ind) {
+    char * left = NULL;
+    char * right = NULL;
+    if (ast->oper.binaryExp.left->tag == tag_binary) left = FillTac(ast->oper.binaryExp.left, tac, ind);
+    if (ast->oper.binaryExp.right->tag == tag_binary) right = FillTac(ast->oper.binaryExp.right, tac, ind);
 
+    Atom arg1, arg2, res;
+    if (left) strcpy(arg1.c, left);
+    else arg1.i = ast->oper.binaryExp.left->oper.intExp;
+    if (right) strcpy(arg2.c, right);
+    else arg2.i = ast->oper.binaryExp.right->oper.intExp;
+    assert(arg1.i && arg2.i);
 
+    sprintf(res.c, "t%d", *ind);
+    tac[*ind].operator = ast->oper.binaryExp.operator;
+    tac[*ind].arg1.i = arg1.i;
+    tac[*ind].arg2.i = arg2.i;
+    strcpy(tac[*ind].result.c,res.c);
+    return tac[(*ind)++].result.c;
+}
 
+TAC_Entry * ASTtoTAC(AST * node) {
+    if (node->tag != tag_binary) {
+        TAC_Entry * arr = (TAC_Entry *) malloc(sizeof(TAC_Entry));
+        arr->operator = op_null; // if null then use only arg1
+        arr->arg1.i = node->oper.intExp;
+        arr->arg2.i = 0;
+        arr->result.i = 0;
+        return arr;
+    }
+    unsigned int count = ParentCount_AST(node);
+    TAC_Entry * arr = (TAC_Entry *) malloc(sizeof(TAC_Entry) * count);
+    char * ind = (char*) malloc(sizeof(char));
+    *ind = 0;
+    FillTac(node, arr, ind);
+    free(ind);
+    return arr;
+}
 
 
 AST * parse_AST() { // lvl starts with 0
@@ -577,6 +616,7 @@ AST * parse_AST() { // lvl starts with 0
     case WEND_H: return parse_WendStatementExp();
     case REM_H: return parse_RemStatementExp();
     case GOTO_H: return parse_GotoStatementExp();
+    case CLS_H: return parse_ClsStatementExp();
     default: return parse_AssignExp();
     }
     

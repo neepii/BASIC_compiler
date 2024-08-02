@@ -23,7 +23,8 @@ enum statement {
     op_wend,
     op_next,
     op_cls,
-    op_goto
+    op_goto,
+    stmt_null
 };
 
 enum operator {
@@ -36,13 +37,14 @@ enum operator {
     op_less_eq,     // "<="
     op_greater_eq,  // ">="
     op_equal,       // "="  
-    op_not_eq      // "<>" "><"
+    op_not_eq,      // "<>" "><"
+    op_null
 };
 
 /*
     three-address code
 */
-typedef struct {
+typedef struct tac{
     enum operator operator;
     Atom arg1;
     Atom arg2;
@@ -79,6 +81,7 @@ typedef struct exp
             struct exp* identifier;
             struct exp* value;
         } assignExp;
+        TAC_Entry * arithExp;
         struct {
             int value;
             bool isGotoLabel;
@@ -118,7 +121,6 @@ typedef struct exp
 void printAST(AST* ast);
 AST * AllocNode();
 void map_ast(AST * ast, void* (*f)(void*));
-void print_leaf(AST * leaf);
 AST * parse_AST();
 void freeTokensArr();
 void allocTokensArr();
@@ -130,6 +132,9 @@ void parse_error(char * str);
 void parse_syntax_error(char* str);
 bool match(char*, const char*);
 void FreeAST(AST * ast);
+TAC_Entry * ASTtoTAC(AST * node);
+TAC_Entry * addTacAtom(int op, Atom arg1);
+TAC_Entry * addTacBin(int op, Atom arg1, Atom arg2, Atom res);
 
 
 

@@ -1,6 +1,4 @@
 #include "basicc.h"
-#include <stdarg.h>
-#include "parse.h"
 FILE * tar;
 unsigned int stackpos = 0;
 AST** statements;
