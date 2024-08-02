@@ -167,7 +167,62 @@ void printAST(AST * ast) {
 
 }
 
-
+void map_ast(AST * ast, void* (*f)(void*)) {
+    if (ast == NULL) {
+        return;
+    }
+    switch (ast->tag)
+    {
+    case tag_assign:
+        map_ast(ast->oper.assignExp.identifier,f);
+        map_ast(ast->oper.assignExp.value,f);
+        break;
+    case tag_numline:
+        map_ast(ast->oper.numline.next,f);
+        break;
+    case tag_symbol:
+    case tag_var:
+    case tag_int:
+    case tag_str:
+        break;
+    case tag_common_statement:
+        map_ast(ast->oper.commonExp.arg,f);
+        break;
+    case tag_one_word_statement:
+        switch (ast->oper.one_word_stmt)
+        {
+        case op_cls:    
+            break;     
+        case op_wend:
+            break;
+        default:
+            break;
+        }
+        break;
+    case tag_if:
+        map_ast(ast->oper.ifstatementExp.predicate,f);
+        map_ast(ast->oper.ifstatementExp.thenExp,f);
+        if (ast->oper.ifstatementExp.elseExp) {
+            map_ast(ast->oper.ifstatementExp.elseExp,f);
+        }
+        break;
+    case tag_binary:
+        map_ast(ast->oper.binaryExp.left,f);
+        map_ast(ast->oper.binaryExp.right,f);
+        break;
+    case tag_for:
+        map_ast(ast->oper.forstatementExp.initial,f);
+        map_ast(ast->oper.forstatementExp.final,f);
+        map_ast(ast->oper.forstatementExp.step,f);
+        break;
+    case tag_unary:
+        map_ast(ast->oper.unaryExp.operand,f);
+        break;
+    default:
+        break;
+    }   
+    f(ast);
+}
 void printParsedLine(AST * tree) {
     printAST(tree);
     printf("\n");
@@ -177,36 +232,7 @@ void printParsedLine(AST * tree) {
 
 
 void FreeAST(AST * ast) {
-    if (ast == NULL || ast->inSymbol==true) return;
-    switch (ast->tag) {
-    case tag_numline:
-        FreeAST(ast->oper.numline.next);
-        break;
-    case tag_assign:
-        FreeAST(ast->oper.assignExp.identifier);
-        FreeAST(ast->oper.assignExp.value);
-        break;
-    case tag_common_statement:
-        FreeAST(ast->oper.commonExp.arg);
-        break;
-    case tag_binary:
-        FreeAST(ast->oper.binaryExp.left);
-        FreeAST(ast->oper.binaryExp.right);
-        break;
-    case tag_unary:
-        FreeAST(ast->oper.unaryExp.operand);
-        break;
-    case tag_for:
-        FreeAST(ast->oper.forstatementExp.initial);
-        FreeAST(ast->oper.forstatementExp.final);
-        break;
-    case tag_if:
-        FreeAST(ast->oper.ifstatementExp.predicate);
-        FreeAST(ast->oper.ifstatementExp.thenExp);
-        FreeAST(ast->oper.ifstatementExp.elseExp);
-        break;
-    }
-    free(ast);
+    map_ast(ast, free);
 }
 
 static AST * parse_OneWordStatementExp(int stmt) {
@@ -300,7 +326,6 @@ static AST * parse_GotoStatementExp() {
 
 AST * AllocNode() {
     AST * node = (AST *) malloc(sizeof(AST));
-    node->inSymbol = false;
     return node;
 }
 

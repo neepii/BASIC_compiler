@@ -2,8 +2,8 @@
 #include "token.h"
 char** tokens = NULL;
 
-int tokInd =0;
-int tokLen = 0;
+unsigned int tokInd =0;
+unsigned int tokLen = 0;
 
 void freeTokensArr() {
     for (int i = 0; i < MAX_TOKENS_IN_LINE; i++)

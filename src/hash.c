@@ -64,7 +64,7 @@ LL_NODE * MakeLLnode(char * name,AST * data) {
     LL_NODE * l = (LL_NODE*)malloc(sizeof(LL_NODE));
     strncpy(l->name, name,strlen(name));
 
-    if (data->tag == tag_int) {
+    if (data->tag == tag_int || data->tag == tag_assign) {
         l->data.i = data->oper.intExp;
         l->type = type_int;
     } else if(data->tag == tag_str) {
@@ -73,6 +73,9 @@ LL_NODE * MakeLLnode(char * name,AST * data) {
     } else if(data->tag == tag_var) {
         strncpy(l->data.c, data->oper.varExp, strlen(data->oper.varExp));
         l->type = type_variable;
+    } 
+    else {
+        l->type = type_null;
     }
 
     l->next = NULL;

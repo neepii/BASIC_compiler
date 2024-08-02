@@ -24,12 +24,7 @@
 
 typedef struct ll_node {
     char name[AST_STR_LEN];
-    union {
-        double f;
-        long long i;
-        char c[64];
-        unsigned int addr;
-    } data;
+    Atom data;
     enum {
         type_int,
         type_float,

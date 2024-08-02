@@ -2,8 +2,13 @@
 #define PARSE_H_
 #include "basicc.h"
 #define AST_STR_LEN 20
-
-
+#define TAC_ENTRIES 512 
+typedef union atom {
+    double f;
+    long long i;
+    char c[64];
+    unsigned int addr;
+} Atom;
 
 enum statement {
     op_print,
@@ -33,6 +38,16 @@ enum operator {
     op_equal,       // "="  
     op_not_eq      // "<>" "><"
 };
+
+/*
+    three-address code
+*/
+typedef struct {
+    enum operator operator;
+    Atom arg1;
+    Atom arg2;
+    Atom result;
+} TAC_Entry; 
 
 typedef struct exp AST;
 
@@ -98,21 +113,12 @@ typedef struct exp
         } commonExp;
         enum statement one_word_stmt;
     }oper;
-    bool inSymbol;
 } AST;
 
 void printAST(AST* ast);
 AST * AllocNode();
-// AST * parse_OneWordStatementExp(int stmt);
-// AST * parse_EndStatementExp();
-// AST * parse_ClsStatementExp();
-// AST * parse_BinaryExp(AST* left, char* operator, AST* right);
-// AST * parse_UnaryExp(char * operator);
-// AST * parse_IntExp();
-// AST * parse_StrExp();
-// AST * parse_CallExp();
-// AST * parse_VarExp();
-// AST * parse_AssignExp();
+void map_ast(AST * ast, void* (*f)(void*));
+void print_leaf(AST * leaf);
 AST * parse_AST();
 void freeTokensArr();
 void allocTokensArr();
@@ -124,7 +130,6 @@ void parse_error(char * str);
 void parse_syntax_error(char* str);
 bool match(char*, const char*);
 void FreeAST(AST * ast);
-
 
 
 

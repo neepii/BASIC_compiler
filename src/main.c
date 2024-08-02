@@ -1,7 +1,8 @@
 #include "basicc.h"
 
 #define STATEMENTS_SIZE 50
-
+TAC_Entry * TacArr;
+unsigned int TacInd = 0;
 
 int main(int argc, char  *argv[])
 {
@@ -62,19 +63,17 @@ int main(int argc, char  *argv[])
     {
         printParsedLine(statements[j]);
     }
-
-
+    TacArr = (TAC_Entry*) malloc(sizeof(TAC_Entry) * TAC_ENTRIES);
     make_target_src();
     compile(output_name);
 
     for (int j = 0; j < i; j++)
-    {
-        if (statements[j] != NULL) FreeAST(statements[j]);
+    {    
+        if (statements[j] != NULL) map_ast(statements[j], free);
     }
-        
-
     free(statements);
     free(temp_name);
+    free(TacArr);
     freeTokensArr();
     free_s_table();
     fclose(src);

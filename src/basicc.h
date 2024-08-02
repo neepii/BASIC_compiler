@@ -40,9 +40,11 @@
 #define MAX_TOKENS_IN_LINE 20
 #define TOKEN_LEN 20
 extern char ** tokens;
-extern int tokInd;
-extern int tokLen;
+extern unsigned int tokInd;
+extern unsigned int tokLen;
 extern char * temp_name;
 extern AST** statements;
+extern TAC_Entry * TacArr;
+extern unsigned int TacInd;
 
 #endif
