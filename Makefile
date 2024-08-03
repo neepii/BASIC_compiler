@@ -1,7 +1,6 @@
 SRC := $(shell find src/ -regex ".*\.c")
 OBJ := $(patsubst src/%.c, build/%.o, $(SRC))
 FLAGS := -Wall -g
-export FLAGS
 EXEC_NAME := exec
 # -DNDEBUG to remove assertions
 

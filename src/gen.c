@@ -5,25 +5,25 @@ AST** statements;
 char * tar_path_name;
 unsigned int frameArr[50] = {0};
 unsigned int frameInt = 0;
+#define REG_COUNT 16
 
 
-#define REG_AX 1 << 0
-#define REG_BX 1 << 1
-#define REG_CX 1 << 2
-#define REG_DX 1 << 3
-#define REG_SI 1 << 4
-#define REG_DI 1 << 5
-#define REG_SP 1 << 6
-#define REG_BP 1 << 7
-#define REG_R8 1 << 8
-#define REG_R9 1 << 9
+#define REG_AX  1 << 0
+#define REG_BX  1 << 1
+#define REG_CX  1 << 2
+#define REG_DX  1 << 3
+#define REG_SI  1 << 4
+#define REG_DI  1 << 5
+#define REG_SP  1 << 6
+#define REG_BP  1 << 7
+#define REG_R8  1 << 8
+#define REG_R9  1 << 9
 #define REG_R10 1 << 10
 #define REG_R11 1 << 11
 #define REG_R12 1 << 12
 #define REG_R13 1 << 13
 #define REG_R14 1 << 14
 #define REG_R15 1 << 15
-
 
 static void put(char * format, ...);
 static void pop(char * str);
@@ -86,19 +86,114 @@ unsigned int cur_frame() {
     return frameArr[frameInt];
 }
 
-void handle_arith_exp(AST * node) {
-    assert(node->tag == tag_arith);
-    TAC * tac = node->oper.arithExp.lowlvl;
-    for (int i = 0; i < tac->len; i++) {
-        if (tac->arr[i].operator == op_plus) {
-            
-        }
-        else if (tac->arr[i].operator == op_plus) {
-
+static int OccupyReg(int ind, int* regArr) {
+    int i;
+    for (i = 0; i < REG_COUNT; i++) {
+        if (i == 6 || i ==7) continue; // bp and sp regs
+        if (regArr[i] == -1) {
+            regArr[i] = ind;
+            break;
         }
     }
+    return i;
+}
+
+char * put_tac(int num, TAC* tac, int *regArr) {
+    static char * regs[REG_COUNT] = {
+        "%rax", "%rbx", "%rcx", "%rdx",
+        "%rsi", "%rdi",
+
+        "%rsp", "%rbp", //cant use this
+
+        "%r8", "%r9", "%r10", "%r11",
+        "%r12", "%r13", "%r14", "%r15"
+    };
+    char * str1;
+    char * str2;
+    int ind;
+    if (isTempVar(tac->arr[num].arg1)) {
+        for (int i = num; i >= 0; i--) {
+            if (match(tac->arr[num].arg1.c, tac->arr[i].result.c)) {
+                str1 =put_tac(i,tac, regArr);
+                break;
+            }
+        }
+    } else {
+        char temp1[10] = {0};
+        sprintf(temp1, "$%lld", tac->arr[num].arg1.i);
+        str1 = temp1;
+    }
+
+    if (isTempVar(tac->arr[num].arg2)) {
+        for (int i = num; i >= 0; i--) {
+            if (match(tac->arr[num].arg2.c, tac->arr[i].result.c)) {
+                str2 =put_tac(i,tac, regArr);
+                break;
+            }
+        }
+    } else {
+        char temp2[10] = {0};
+        sprintf(temp2, "$%lld", tac->arr[num].arg2.i);
+        str2 = temp2;
+    }
     
-    return;
+
+    // pick register
+    ind = GetTempIndex(tac->arr[num].result.c);    
+    ind = OccupyReg(ind, regArr);
+
+    //free registers
+    for (int i = 0; i < tac->len; i++) {
+        if (tac->LiveInterval[i][1] < num) { //not being used
+
+            for (int j = 0; j < REG_COUNT; j++) { // linear search
+                if (regArr[j] == i) regArr[i] = -1;
+                break;
+            }
+
+        }   
+    }
+
+    if (! (isTempVar(tac->arr[num].arg1) || isTempVar(tac->arr[num].arg2)) ) {
+        int tempind = GetTempIndex(tac->arr[num].arg2.c);
+        tempind = OccupyReg(tempind, regArr);
+        char * reg_temp = regs[tempind];
+        put("mov %s, %s",str2, reg_temp);
+        strcpy(tac->arr[num].arg2.c, reg_temp);
+        str2 = reg_temp;
+    } 
+    if (isTempVar(tac->arr[num].arg1) && !isTempVar(tac->arr[num].arg2)){
+        char * temp_p = str1;
+        str1 = str2;
+        str2 = temp_p;
+    }
+
+    switch (tac->arr[num].operator)
+    {
+    case op_plus:
+        put("add %s,%s", str1, str2);
+        break;
+    case op_minus:
+        put("sub %s,%s", str1, str2);
+        break;
+    
+    default:
+        break;
+    }
+
+
+    return str2;  // return register char*
+}
+
+char * handle_arith_exp(AST * node) {
+
+    assert(node->tag == tag_arith);
+    TAC * tac = node->oper.arithExp.lowlvl;
+
+    int * isRegOccup = (int*) malloc(sizeof(int) * REG_COUNT);
+    for (int i = 0; i < REG_COUNT; i++) isRegOccup[i] = -1; // -1 == register is free
+    
+    return put_tac(tac->len-1, tac, isRegOccup);
 }
 
 bool handle_common_statements(AST * node) {
@@ -145,9 +240,9 @@ bool handle_common_statements(AST * node) {
         put("");
         id = arg->oper.assignExp.identifier->oper.symbol;
         ind = S_TABLE->inds[id];
-        handle_arith_exp(arg->oper.assignExp.value);
+        char * return_reg = handle_arith_exp(arg->oper.assignExp.value);
         stackpos += 4;
-        put("movl $%d, -%d(%%rbp)",arg->oper.assignExp.value->oper.intExp ,stackpos-cur_frame());
+        put("mov %s, -%d(%%rbp)",return_reg,stackpos-cur_frame());
         S_TABLE->list[ind]->data.addr = stackpos - cur_frame();
         break;
     case op_end:

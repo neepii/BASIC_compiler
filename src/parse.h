@@ -8,6 +8,7 @@ typedef union atom {
     double f;
     long long i;
     char c[64];
+    char *cp;
     unsigned int addr;
 } Atom;
 
@@ -144,8 +145,9 @@ void parse_syntax_error(char* str);
 bool match(char*, const char*);
 void FreeAST(AST * ast);
 TAC * ASTtoTAC(AST * node);
-TAC_Entry * addTacAtom(int op, Atom arg1);
-TAC_Entry * addTacBin(int op, Atom arg1, Atom arg2, Atom res);
+bool isTempVar(Atom atom);
+int GetTempIndex(char * str);
+char * itoa(int num);
 
 
 

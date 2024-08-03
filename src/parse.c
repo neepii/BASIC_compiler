@@ -549,22 +549,25 @@ static unsigned int ParentCount_AST(AST * node) {
         return 1 + ParentCount_AST(node->oper.binaryExp.left) + ParentCount_AST(node->oper.binaryExp.right);
     }
 }
-static bool isTempVar(Atom atom) {
-    int len = strlen(atom.c);
-    return ((atom.c[len-1] = 't') && (isINT(atom.c))); // [0-9]t is reserved for temp vars in TAC
-}
-static int GetTempIndex(char * str) { 
-    int num = 0;
-    int decimal = 1;
-    int digit;
-    int count = strlen(str);
-    for (int i = count-2; i >=0; i--)
-    {
+int p_atoi(char *str, int count) {
+    int decimal = 1, num = 0, digit;
+    for (int i = count-1; i >= 0; i--) {
         digit = str[i] - '0';
         num += digit * decimal;
         decimal *= 10;
     }
     return num;
+}
+
+
+
+bool isTempVar(Atom atom) {
+    if (atom.i == 0) return false;
+    int len = strlen(atom.c);
+    return ((atom.c[len-1] = 't') && (isINT(atom.c))); // [0-9]t is reserved for temp vars in TAC
+}
+int GetTempIndex(char * str) { 
+    return p_atoi(str, strlen(str)-1);
 }
 
 static void FillLiveArr(TAC * tac) {
@@ -626,25 +629,7 @@ char * FillTac(AST * ast, TAC * tac, char * ind) {
 }
 
 TAC * ASTtoTAC(AST * node) {
-    if (node->tag != tag_binary) {
-        TAC * tac = (TAC*) malloc(sizeof(TAC));
-        TAC_Entry * arr = (TAC_Entry *) malloc(sizeof(TAC_Entry));
-        arr->operator = op_null; // if null then use only arg1
-        arr->arg1.i = node->oper.intExp;
-        arr->arg2.i = 0;
-        arr->result.i = 0;
-        tac->arr = arr;
-        tac->len = 1;
-        // skip liveInterval;
-        return tac;
-    }
-    unsigned int count = ParentCount_AST(node);
     TAC * tac = (TAC*) malloc(sizeof(TAC));
-    TAC_Entry * arr = (TAC_Entry *) malloc(sizeof(TAC_Entry) * count);
-    tac->arr = arr;
-    tac->len = count;
-    char * ind = (char*) malloc(sizeof(char));
-    *ind = 0;
     for (int i = 0; i < LIVE_INTER_LEN; i++)
     {
         for (int j = 0; j < 2; j++)
@@ -653,6 +638,24 @@ TAC * ASTtoTAC(AST * node) {
         }
             
     }
+    if (node->tag != tag_binary) {    
+        TAC_Entry * arr = (TAC_Entry *) malloc(sizeof(TAC_Entry));
+        arr->operator = op_null; // if null then use only arg1
+        arr->arg1.i = node->oper.intExp;
+        arr->arg2.i = 0;
+        arr->result.i = 0;
+        tac->arr = arr;
+        tac->len = 1;
+        return tac;
+    }
+    unsigned int count = ParentCount_AST(node);
+    
+    TAC_Entry * arr = (TAC_Entry *) malloc(sizeof(TAC_Entry) * count);
+    tac->arr = arr;
+    tac->len = count;
+    char * ind = (char*) malloc(sizeof(char));
+    *ind = 0;
+
     FillTac(node, tac, ind);
     free(ind);
     return tac;
