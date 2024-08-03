@@ -3,6 +3,7 @@
 #include "basicc.h"
 #define AST_STR_LEN 20
 #define TAC_ENTRIES 512 
+#define LIVE_INTER_LEN 15
 typedef union atom {
     double f;
     long long i;
@@ -41,15 +42,21 @@ enum operator {
     op_null
 };
 
-/*
-    three-address code
-*/
-typedef struct tac{
+typedef struct tacentry{
     enum operator operator;
     Atom arg1;
     Atom arg2;
     Atom result;
-} TAC_Entry; 
+} TAC_Entry;
+
+/*
+    three-address code
+*/
+typedef struct tac{
+    unsigned int len;
+    TAC_Entry * arr;
+    short LiveInterval[LIVE_INTER_LEN][2];
+}TAC;
 
 typedef struct exp AST;
 
@@ -69,7 +76,8 @@ typedef struct exp
         tag_function,
         tag_if,
         tag_for,
-        tag_numline
+        tag_numline,
+        tag_arith
     } tag;  
     union
     {   
@@ -81,7 +89,10 @@ typedef struct exp
             struct exp* identifier;
             struct exp* value;
         } assignExp;
-        TAC_Entry * arithExp;
+        struct {
+            TAC * lowlvl;
+            struct exp*highlvl;
+        } arithExp;
         struct {
             int value;
             bool isGotoLabel;
@@ -132,7 +143,7 @@ void parse_error(char * str);
 void parse_syntax_error(char* str);
 bool match(char*, const char*);
 void FreeAST(AST * ast);
-TAC_Entry * ASTtoTAC(AST * node);
+TAC * ASTtoTAC(AST * node);
 TAC_Entry * addTacAtom(int op, Atom arg1);
 TAC_Entry * addTacBin(int op, Atom arg1, Atom arg2, Atom res);
 

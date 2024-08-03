@@ -9,8 +9,8 @@ int main(int argc, char  *argv[])
 
     char output_name[50] = "a.out";
     char source_name[50] = {0};
-    temp_name = (char *) malloc(sizeof(char) * 50);
-    strcpy(temp_name,"/tmp/XXX08080.s");
+    tar_path_name = (char *) malloc(sizeof(char) * 50);
+    strcpy(tar_path_name,"/tmp/XXX08080.s");
     if (argc == 1) {
         printf("No arguments\n");
         exit(1);
@@ -26,7 +26,7 @@ int main(int argc, char  *argv[])
             i++;
         }
         else if (match(argv[i], "--debug")) {
-            strcpy(temp_name, "XXX08080.s");
+            strcpy(tar_path_name, "XXX08080.s");
         }
         else {
             strcpy(source_name, argv[i]);
@@ -70,7 +70,7 @@ int main(int argc, char  *argv[])
         if (statements[j] != NULL) map_ast(statements[j], free);
     }
     free(statements);
-    free(temp_name);
+    free(tar_path_name);
     freeTokensArr();
     free_s_table();
     fclose(src);

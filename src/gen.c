@@ -2,7 +2,7 @@
 FILE * tar;
 unsigned int stackpos = 0;
 AST** statements;
-char * temp_name;
+char * tar_path_name;
 unsigned int frameArr[50] = {0};
 unsigned int frameInt = 0;
 
@@ -86,6 +86,21 @@ unsigned int cur_frame() {
     return frameArr[frameInt];
 }
 
+void handle_arith_exp(AST * node) {
+    assert(node->tag == tag_arith);
+    TAC * tac = node->oper.arithExp.lowlvl;
+    for (int i = 0; i < tac->len; i++) {
+        if (tac->arr[i].operator == op_plus) {
+            
+        }
+        else if (tac->arr[i].operator == op_plus) {
+
+        }
+    }
+    
+    return;
+}
+
 bool handle_common_statements(AST * node) {
     int ind, id;
     AST * arg = node->oper.commonExp.arg;
@@ -100,7 +115,6 @@ bool handle_common_statements(AST * node) {
             sprintf(str, "$str%d", id);
             sprintf(len, "$%ld", strlen(S_TABLE->list[ind]->data.c)+1);
             multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "$1", len, str, "$1");
-
         } else if (S_TABLE->list[ind]->type == type_int) {
             sprintf(str, "-%d(%%rbp)", S_TABLE->list[ind]->data.addr);
             multi_mov(REG_AX | REG_DI, "$digitspace", str);
@@ -131,6 +145,7 @@ bool handle_common_statements(AST * node) {
         put("");
         id = arg->oper.assignExp.identifier->oper.symbol;
         ind = S_TABLE->inds[id];
+        handle_arith_exp(arg->oper.assignExp.value);
         stackpos += 4;
         put("movl $%d, -%d(%%rbp)",arg->oper.assignExp.value->oper.intExp ,stackpos-cur_frame());
         S_TABLE->list[ind]->data.addr = stackpos - cur_frame();
@@ -217,7 +232,7 @@ static void put(char * format, ...) {
 
 void make_target_src() { //my brain hurts
 
-    tar = fopen(temp_name, "w"); 
+    tar = fopen(tar_path_name, "w"); 
     put(".code64");
     fprintf(tar,".section .data\n"); 
     data_section();
@@ -234,7 +249,7 @@ void compile(char * output_name)  {
     char ld[100];
     char rm[100];
 
-    sprintf(as, "as %s -o %s.o", temp_name, output_name);
+    sprintf(as, "as %s -o %s.o", tar_path_name, output_name);
     sprintf(ld, "ld %s.o -o %s", output_name, output_name);
     sprintf(rm, "rm -rf %s.o", output_name);
     system(as);

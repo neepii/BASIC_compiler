@@ -138,6 +138,9 @@ void printAST(AST * ast) {
             printAST(ast->oper.ifstatementExp.elseExp);
         }
         break;
+    case tag_arith:
+        printAST(ast->oper.arithExp.highlvl);
+        break;
     case tag_binary:
         printAST(ast->oper.binaryExp.left);
         print_op(ast->oper.binaryExp.operator);
@@ -546,15 +549,62 @@ static unsigned int ParentCount_AST(AST * node) {
         return 1 + ParentCount_AST(node->oper.binaryExp.left) + ParentCount_AST(node->oper.binaryExp.right);
     }
 }
+static bool isTempVar(Atom atom) {
+    int len = strlen(atom.c);
+    return ((atom.c[len-1] = 't') && (isINT(atom.c))); // [0-9]t is reserved for temp vars in TAC
+}
+static int GetTempIndex(char * str) { 
+    int num = 0;
+    int decimal = 1;
+    int digit;
+    int count = strlen(str);
+    for (int i = count-2; i >=0; i--)
+    {
+        digit = str[i] - '0';
+        num += digit * decimal;
+        decimal *= 10;
+    }
+    return num;
+}
+
+static void FillLiveArr(TAC * tac) {
+    int tempind = 0;
+    for (int i = 0; i < tac->len; i++)
+    {
+        if (isTempVar(tac->arr[i].result)) {
+            tempind = GetTempIndex(tac->arr[i].result.c);                                   // index
+            if (tac->LiveInterval[tempind][0] == -1) tac->LiveInterval[tempind][0] = i;     // update start interval if it has default value
+            tac->LiveInterval[tempind][1] = i;                                              // update end interval
+        }
+        if (isTempVar(tac->arr[i].arg1)) {
+            tempind = GetTempIndex(tac->arr[i].arg1.c); 
+            if (tac->LiveInterval[tempind][0] == -1) tac->LiveInterval[tempind][0] = i;
+            tac->LiveInterval[tempind][1] = i; 
+        }
+        if (isTempVar(tac->arr[i].arg2)) {
+            tempind = GetTempIndex(tac->arr[i].arg2.c); 
+            if (tac->LiveInterval[tempind][0] == -1) tac->LiveInterval[tempind][0] = i;
+            tac->LiveInterval[tempind][1] = i; 
+        }
+    }
+}
 
 static AST * parse_arith_expression() {
     if (ParenthesisLvl) parse_syntax_error("non-closed parethesis");
-    AST * exp =  iter_parse_exp(-1);
-    TAC_Entry * tac = ASTtoTAC(exp);
+    AST * ast = iter_parse_exp(-1);
+    TAC * tac = ASTtoTAC(ast);
+
+    AST* exp = (AST*) malloc(sizeof(AST));
+    exp->tag = tag_arith;
+    exp->oper.arithExp.highlvl = ast;
+    exp->oper.arithExp.lowlvl = tac;
+
+    FillLiveArr(tac);
+
     return exp;
 }
 
-char * FillTac(AST * ast, TAC_Entry * tac, char * ind) {
+char * FillTac(AST * ast, TAC * tac, char * ind) {
     char * left = NULL;
     char * right = NULL;
     if (ast->oper.binaryExp.left->tag == tag_binary) left = FillTac(ast->oper.binaryExp.left, tac, ind);
@@ -567,30 +617,45 @@ char * FillTac(AST * ast, TAC_Entry * tac, char * ind) {
     else arg2.i = ast->oper.binaryExp.right->oper.intExp;
     assert(arg1.i && arg2.i);
 
-    sprintf(res.c, "t%d", *ind);
-    tac[*ind].operator = ast->oper.binaryExp.operator;
-    tac[*ind].arg1.i = arg1.i;
-    tac[*ind].arg2.i = arg2.i;
-    strcpy(tac[*ind].result.c,res.c);
-    return tac[(*ind)++].result.c;
+    sprintf(res.c, "%dt", *ind);
+    tac->arr[*ind].operator = ast->oper.binaryExp.operator;
+    tac->arr[*ind].arg1.i = arg1.i;
+    tac->arr[*ind].arg2.i = arg2.i;
+    strcpy(tac->arr[*ind].result.c, res.c);
+    return tac->arr[(*ind)++].result.c;
 }
 
-TAC_Entry * ASTtoTAC(AST * node) {
+TAC * ASTtoTAC(AST * node) {
     if (node->tag != tag_binary) {
+        TAC * tac = (TAC*) malloc(sizeof(TAC));
         TAC_Entry * arr = (TAC_Entry *) malloc(sizeof(TAC_Entry));
         arr->operator = op_null; // if null then use only arg1
         arr->arg1.i = node->oper.intExp;
         arr->arg2.i = 0;
         arr->result.i = 0;
-        return arr;
+        tac->arr = arr;
+        tac->len = 1;
+        // skip liveInterval;
+        return tac;
     }
     unsigned int count = ParentCount_AST(node);
+    TAC * tac = (TAC*) malloc(sizeof(TAC));
     TAC_Entry * arr = (TAC_Entry *) malloc(sizeof(TAC_Entry) * count);
+    tac->arr = arr;
+    tac->len = count;
     char * ind = (char*) malloc(sizeof(char));
     *ind = 0;
-    FillTac(node, arr, ind);
+    for (int i = 0; i < LIVE_INTER_LEN; i++)
+    {
+        for (int j = 0; j < 2; j++)
+        {
+            tac->LiveInterval[i][j] = -1;
+        }
+            
+    }
+    FillTac(node, tac, ind);
     free(ind);
-    return arr;
+    return tac;
 }
 
 

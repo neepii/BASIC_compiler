@@ -46,7 +46,7 @@
 extern char ** tokens;
 extern unsigned int tokInd;
 extern unsigned int tokLen;
-extern char * temp_name;
+extern char * tar_path_name;
 extern AST** statements;
 
 
