@@ -98,6 +98,45 @@ static int OccupyReg(int ind, int* regArr) {
     return i;
 }
 
+static int requestReg(char * tempVar, int * regArr) {
+    int tempind = GetTempIndex(tempVar);
+    return OccupyReg(tempind, regArr);
+}
+
+static void handle_one_arg_op(int* regArr, char * regs[16], Atom args[2], char * str[2], char * op) {
+    bool pop_b = false;
+    int temporary = requestReg(str[1], regArr);
+    if (regArr[0] != -1 && !match(str[1], "%rax")) {
+        push("%rax");
+        put("mov %%rax, %s", regs[temporary]);
+        pop("%rax");   
+
+        if (regArr[3] != -1) {
+            push("%rdx");
+            pop_b = true;
+        }
+
+        put("mov %s, %%rax", str[0]);
+        put("%s %s",op, str[1]);
+        if (pop_b)  pop("%rdx");
+        put("mov %%rax, %s", str[1]);
+
+        put("mov %s, %%rax", regs[temporary]);
+    } else {
+        assert(regArr[0] != -1);
+        
+        if (regArr[3] != -1) { //rdx is occupied
+            push("%rdx");
+        }
+        put("mov %s, %s", str[0],regs[temporary]);
+        put("%s %s",op, regs[temporary]);
+
+        if (!match(str[1], "%rax")) put("mov %%rax, %s", str[1]);
+        if (pop_b) pop("%rdx");
+    }
+    regArr[temporary] = -1;
+}
+
 char * put_tac(int num, TAC* tac, int *regArr) {
     static char * regs[REG_COUNT] = {
         "%rax", "%rbx", "%rcx", "%rdx",
@@ -108,81 +147,76 @@ char * put_tac(int num, TAC* tac, int *regArr) {
         "%r8", "%r9", "%r10", "%r11",
         "%r12", "%r13", "%r14", "%r15"
     };
-    char * str1;
-    char * str2;
-    int ind;
-    if (isTempVar(tac->arr[num].arg1)) {
-        for (int i = num; i >= 0; i--) {
-            if (match(tac->arr[num].arg1.c, tac->arr[i].result.c)) {
-                str1 =put_tac(i,tac, regArr);
-                break;
+    char * str[2];
+    Atom args[2] = {tac->arr[num].arg1, tac->arr[num].arg2};
+    char temp[2][20] = {0};
+
+    for (int i = 0; i < 2; i++)
+    {
+        if (isTempVar(args[i])) {
+            for (int j = num;j >= 0; j--) {
+                if (match(args[i].c, tac->arr[j].result.c)) {
+                    str[i] =put_tac(j,tac, regArr);
+                    break;
+                }
             }
-        }
-    } else {
-        char temp1[10] = {0};
-        sprintf(temp1, "$%lld", tac->arr[num].arg1.i);
-        str1 = temp1;
-    }
-
-    if (isTempVar(tac->arr[num].arg2)) {
-        for (int i = num; i >= 0; i--) {
-            if (match(tac->arr[num].arg2.c, tac->arr[i].result.c)) {
-                str2 =put_tac(i,tac, regArr);
-                break;
-            }
-        }
-    } else {
-        char temp2[10] = {0};
-        sprintf(temp2, "$%lld", tac->arr[num].arg2.i);
-        str2 = temp2;
-    }
-    
-
-    // pick register
-    ind = GetTempIndex(tac->arr[num].result.c);    
-    ind = OccupyReg(ind, regArr);
-
-    //free registers
-    for (int i = 0; i < tac->len; i++) {
-        if (tac->LiveInterval[i][1] < num) { //not being used
-
-            for (int j = 0; j < REG_COUNT; j++) { // linear search
-                if (regArr[j] == i) regArr[i] = -1;
-                break;
-            }
-
+        } else {
+            sprintf(temp[i], "$%lld", args[i].i);
+            str[i] = temp[i];
         }   
     }
+    // int ind;
+    // // pick register
+    // ind = GetTempIndex(tac->arr[num].result.c);    
+    // ind = OccupyReg(ind, regArr);
 
-    if (! (isTempVar(tac->arr[num].arg1) || isTempVar(tac->arr[num].arg2)) ) {
-        int tempind = GetTempIndex(tac->arr[num].arg2.c);
-        tempind = OccupyReg(tempind, regArr);
-        char * reg_temp = regs[tempind];
-        put("mov %s, %s",str2, reg_temp);
-        strcpy(tac->arr[num].arg2.c, reg_temp);
-        str2 = reg_temp;
+    // //free registers
+    // for (int i = 0; i < tac->len; i++) {
+    //     if (tac->LiveInterval[i][1] < num) { //not being used
+
+    //         for (int j = 0; j < REG_COUNT; j++) { // linear search
+    //             if (regArr[j] == i) regArr[i] = -1;
+    //             break;
+    //         }
+
+    //     }   
+    // }
+
+    if (! (isTempVar(args[0]) || isTempVar(args[1])) ) {
+        int new_ind = requestReg(args[1].c, regArr);
+        char * reg_temp = regs[new_ind];
+        put("mov %s, %s",str[1], reg_temp);
+        strcpy(args[1].c, reg_temp);
+        str[1] = reg_temp;
     } 
-    if (isTempVar(tac->arr[num].arg1) && !isTempVar(tac->arr[num].arg2)){
-        char * temp_p = str1;
-        str1 = str2;
-        str2 = temp_p;
+    if (isTempVar(args[0]) && !isTempVar(args[1])){
+        char * temp_p = str[1];
+        str[1] = str[0];
+        str[0] = temp_p;
     }
 
     switch (tac->arr[num].operator)
     {
+    case op_null:
+        break;
     case op_plus:
-        put("add %s,%s", str1, str2);
+        put("add %s, %s", str[0], str[1]);
         break;
     case op_minus:
-        put("sub %s,%s", str1, str2);
+        put("sub %s, %s", str[0], str[1]);
         break;
-    
+    case op_mul:
+        handle_one_arg_op(regArr, regs, args, str, "mul");
+        break;
+    case op_div:
+        handle_one_arg_op(regArr, regs, args, str, "div");
+        break;
     default:
         break;
     }
 
 
-    return str2;  // return register char*
+    return str[1];  // return register char*
 }
 
 char * handle_arith_exp(AST * node) {

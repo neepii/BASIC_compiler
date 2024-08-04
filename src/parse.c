@@ -641,8 +641,8 @@ TAC * ASTtoTAC(AST * node) {
     if (node->tag != tag_binary) {    
         TAC_Entry * arr = (TAC_Entry *) malloc(sizeof(TAC_Entry));
         arr->operator = op_null; // if null then use only arg1
-        arr->arg1.i = node->oper.intExp;
-        arr->arg2.i = 0;
+        arr->arg2.i = node->oper.intExp;
+        arr->arg1.i = 0;
         arr->result.i = 0;
         tac->arr = arr;
         tac->len = 1;
