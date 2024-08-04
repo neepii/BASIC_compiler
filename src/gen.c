@@ -5,8 +5,9 @@ AST** statements;
 char * tar_path_name;
 unsigned int frameArr[50] = {0};
 unsigned int frameInt = 0;
-#define REG_COUNT 16
 
+#define REG_COUNT 16
+bool RegIsCleared[REG_COUNT] = {true};
 
 #define REG_AX  1 << 0
 #define REG_BX  1 << 1
@@ -46,7 +47,7 @@ static void data_section() {
         
         while (S_TABLE->list[ind]->id != i) list = list->next;
         if (list->type == type_string) {
-            put("str%d: .ascii \"%s\\n\"", list->id, list->data.c);
+            put("str%d: .ascii \"%s\"", list->id, list->data.c);
         }
     }
 }
@@ -163,30 +164,31 @@ char * put_tac(int num, TAC* tac, int *regArr) {
             str[i] = temp[i];
         }   
     }
-    // int ind;
-    // // pick register
-    // ind = GetTempIndex(tac->arr[num].result.c);    
-    // ind = OccupyReg(ind, regArr);
 
-    // //free registers
-    // for (int i = 0; i < tac->len; i++) {
-    //     if (tac->LiveInterval[i][1] < num) { //not being used
+    //free registers
+    for (int i = 0; i < tac->len; i++) {
+        if (tac->LiveInterval[i][1] < num) { //not being used
 
-    //         for (int j = 0; j < REG_COUNT; j++) { // linear search
-    //             if (regArr[j] == i) regArr[i] = -1;
-    //             break;
-    //         }
+            for (int j = 0; j < REG_COUNT; j++) { // linear search
+                if (regArr[j] == i) {
+                    regArr[i] = -1;
+                    RegIsCleared[i] = true;
+                }
+                break;
+            }
 
-    //     }   
-    // }
+        }   
+    }
 
     if (! (isTempVar(args[0]) || isTempVar(args[1])) ) {
         int new_ind = requestReg(args[1].c, regArr);
         char * reg_temp = regs[new_ind];
+        if (!RegIsCleared[new_ind]) put("xor %s, %s", reg_temp, reg_temp);
         put("mov %s, %s",str[1], reg_temp);
+        RegIsCleared[new_ind] = false;
         strcpy(args[1].c, reg_temp);
         str[1] = reg_temp;
-    } 
+    }
     if (isTempVar(args[0]) && !isTempVar(args[1])){
         char * temp_p = str[1];
         str[1] = str[0];
