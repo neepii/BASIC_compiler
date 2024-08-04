@@ -430,7 +430,7 @@ static AST * parse_NumLineExp() {
 }
 
 static AST * parse_AssignExp() {
-    AST * node = AllocNode();
+    AST * node = AllocNode();    
     node->tag = tag_assign;
     AST * identifier = parse_VarExp();
     get_next_token();
@@ -440,7 +440,12 @@ static AST * parse_AssignExp() {
         value = NULL;
     } else {
         get_next_token();
-        value = parse_arith_expression();
+        if (isINT(cur_token())) {
+            value = parse_arith_expression();
+        } else if (isSTRING(cur_token())) {
+            value = parse_StrExp();
+        }
+        
     }
     node->oper.assignExp.identifier = identifier;
     node->oper.assignExp.value = value;

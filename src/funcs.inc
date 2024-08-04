@@ -20,11 +20,12 @@ strlen_loop:
 	movb (%rax), %bl
 	cmp $0, %rbx
 	jz strlen_end
+	cmp $10, %rbx
+	je strlen_end
 	inc %eax
 	jmp strlen_loop
 strlen_end:
-	sub %rax, %rcx
-	dec %rax
+	sub %rcx, %rax
 	ret
 
 

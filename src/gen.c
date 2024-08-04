@@ -107,9 +107,7 @@ static void handle_one_arg_op(int* regArr, char * regs[16], Atom args[2], char *
     bool pop_b = false;
     int temporary = requestReg(str[1], regArr);
     if (regArr[0] != -1 && !match(str[1], "%rax")) {
-        push("%rax");
-        put("mov %%rax, %s", regs[temporary]);
-        pop("%rax");   
+        put("xchg %%rax, %s", regs[temporary]);
 
         if (regArr[3] != -1) {
             push("%rdx");
@@ -220,7 +218,6 @@ char * put_tac(int num, TAC* tac, int *regArr) {
 }
 
 char * handle_arith_exp(AST * node) {
-
     assert(node->tag == tag_arith);
     TAC * tac = node->oper.arithExp.lowlvl;
 
@@ -258,6 +255,7 @@ bool handle_common_statements(AST * node) {
             multi_mov(REG_AX | REG_SI | REG_DI, "$1", str, "$1");
         }
         put("syscall");
+        call("newline");
         break;
     case op_goto:
         put("jmp goto%d",arg->oper.intExp);
@@ -274,9 +272,9 @@ bool handle_common_statements(AST * node) {
         put("");
         id = arg->oper.assignExp.identifier->oper.symbol;
         ind = S_TABLE->inds[id];
-        char * return_reg = handle_arith_exp(arg->oper.assignExp.value);
+        char * value = handle_arith_exp(arg->oper.assignExp.value);
         stackpos += 4;
-        put("mov %s, -%d(%%rbp)",return_reg,stackpos-cur_frame());
+        put("mov %s, -%d(%%rbp)",value,stackpos-cur_frame());
         S_TABLE->list[ind]->data.addr = stackpos - cur_frame();
         break;
     case op_end:
