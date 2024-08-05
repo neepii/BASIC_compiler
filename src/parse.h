@@ -128,6 +128,7 @@ typedef struct exp
         } commonExp;
         enum statement one_word_stmt;
     }oper;
+    bool inTable;
 } AST;
 
 void printAST(AST* ast);

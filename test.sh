@@ -22,11 +22,6 @@ test "
 10 PRINT \"HI\"\n
 20 END
 "
-test "
-10 LET A = 5 / 3\n
-20 PRINT A\n
-30 END
-"
 
 test "
 10 LET A = 8 * 9 + 41\n

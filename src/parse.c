@@ -248,6 +248,7 @@ static AST * parse_CommonExp(AST* (*f)(void),int stmt) {
     get_next_token();
     node->oper.commonExp.stmt = stmt;
     node->oper.commonExp.arg = f();
+    if (node->oper.commonExp.arg->inTable) node->inTable =true;
     return node;
 
 }
@@ -272,21 +273,28 @@ static AST * parse_IfStatementExp() {
     
 }
 static AST * parse_EndStatementExp() {
-    return parse_CommonExp(parse_AST, op_end);
+    return parse_CommonExp(parse_OneWordStatementExp, op_end);
 }
 static AST * parse_ClsStatementExp() {
     return parse_OneWordStatementExp(op_cls);
 }
 static AST * parse_PrintStatementExp() {
     char * str = next_token();
-    AST * node = parse_CommonExp(parse_leaf, op_print);
+    AST * node = AllocNode();
+    node->tag = tag_common_statement;
+    get_next_token();
+    node->oper.commonExp.stmt = op_print;
     if (isSTRING(str)) {
+        node->oper.commonExp.arg = parse_StrExp();
         add_symbol(node->oper.commonExp.arg);
     } else if (isVAR(str)) {
+        node->oper.commonExp.arg = parse_VarExp();
         int h = (int) hash(str) % S_TABLE_SIZE;
         int id = S_TABLE->list[h]->id;
         node->oper.commonExp.arg->oper.symbol = id;
         node->oper.commonExp.arg->tag = tag_symbol;
+    } else if (isINT(str)) {
+        node->oper.commonExp.arg = parse_arith_expression();
     }
     
     return node;
@@ -326,6 +334,7 @@ static AST * parse_GotoStatementExp() {
 
 AST * AllocNode() {
     AST * node = (AST *) malloc(sizeof(AST));
+    node->inTable = false;
     return node;
 }
 
@@ -443,7 +452,7 @@ static AST * parse_AssignExp() {
         if (isINT(cur_token())) {
             value = parse_arith_expression();
         } else if (isSTRING(cur_token())) {
-            value = parse_StrExp();
+            value = parse_StrExp(); // ???
         }
         
     }

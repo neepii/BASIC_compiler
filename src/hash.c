@@ -39,6 +39,7 @@ void free_s_table() {
 
 void add_symbol(AST * data) {
     char name[TOKEN_LEN];
+    data->inTable = true;
     if (data->tag == tag_assign) {
         strcpy(name, data->oper.assignExp.identifier->oper.varExp);
     } else if (data->tag == tag_str) {

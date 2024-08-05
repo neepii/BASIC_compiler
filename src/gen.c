@@ -234,33 +234,53 @@ char * handle_arith_exp(AST * node) {
     return put_tac(tac->len-1, tac, isRegOccup);
 }
 
+void handle_if_statement(AST * node) {
+    char * predicate_reg = handle_arith_exp(node->oper.ifstatementExp.predicate);
+}
+
 bool handle_common_statements(AST * node) {
-    int ind, id;
+    int ind = 0, id= 0;
     AST * arg = node->oper.commonExp.arg;
     switch (node->oper.commonExp.stmt) {
     case op_print: {
         put("");
-        id = arg->oper.symbol;
-        ind = S_TABLE->inds[id];
         char str[64] = {0};
         char len[25] = {0};
-        if (S_TABLE->list[ind]->type == type_string) {
-            sprintf(str, "$str%d", id);
-            sprintf(len, "$%ld", strlen(S_TABLE->list[ind]->data.c)+1);
-            multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "$1", len, str, "$1");
-        } else if (S_TABLE->list[ind]->type == type_int) {
-            sprintf(str, "-%d(%%rbp)", S_TABLE->list[ind]->data.addr);
-            multi_mov(REG_AX | REG_DI, "$digitspace", str);
+
+        if (arg->tag != tag_symbol && arg->tag != tag_assign) { //my god what have i done
+            char * reg = handle_arith_exp(arg);
+            if (match(reg, "%rax") ) {
+                put("mov %%rax, %%rdi");
+                put("mov %s, %%rax", "$digitspace");
+            } else {
+                multi_mov(REG_AX | REG_DI, "$digitspace", reg);
+            }
             call("uitoa");
             put("mov %%rax, %%rdx");
             multi_mov(REG_AX | REG_SI | REG_DI, "$1", "$digitspace", "$1");
-        } else if (S_TABLE->list[ind]->type == type_pointer_var) {
-            put("mov $stringspace, %%rax");
-            call("strlen");
-            put("mov %%rax, %%rdx");
-            sprintf(str, "%s", S_TABLE->list[ind]->data.c);
-            multi_mov(REG_AX | REG_SI | REG_DI, "$1", str, "$1");
+        } else { //is symbol
+            id = arg->oper.symbol;
+            ind = S_TABLE->inds[id];
+            if (S_TABLE->list[ind]->type == type_string) {
+                sprintf(str, "$str%d", id);
+                sprintf(len, "$%ld", strlen(S_TABLE->list[ind]->data.c)+1);
+                multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "$1", len, str, "$1");
+            } else if (S_TABLE->list[ind]->type == type_int) {
+                sprintf(str, "-%d(%%rbp)", S_TABLE->list[ind]->data.addr);
+                put("movl %s, %%eax", "$digitspace");
+                put("movl %s, %%edi", str);
+                call("uitoa");
+                put("mov %%rax, %%rdx");
+                multi_mov(REG_AX | REG_SI | REG_DI, "$1", "$digitspace", "$1");
+            } else if (S_TABLE->list[ind]->type == type_pointer_var) {
+                put("mov $stringspace, %%rax");
+                call("strlen");
+                put("mov %%rax, %%rdx");
+                sprintf(str, "%s", S_TABLE->list[ind]->data.c);
+                multi_mov(REG_AX | REG_SI | REG_DI, "$1", str, "$1");
+            }
         }
+        
         put("syscall");
         call("newline");
         break;
@@ -334,6 +354,9 @@ static void start() {
         break;
     case tag_one_word_statement:
         handle_one_word_statements(node);
+        break;
+    case tag_if:
+        handle_if_statement(node);
         break;
     default:
         break;
