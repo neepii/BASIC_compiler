@@ -13,7 +13,7 @@ typedef enum wordtype {
     WT_NULL
 } wt;
 
-bool LineToTokens(FILE * in);
+int LineToTokens(FILE * in);
 void TokensToLinePrint();
 void freeTokensArr();
 void allocTokensArr();

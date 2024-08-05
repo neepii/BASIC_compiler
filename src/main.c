@@ -43,7 +43,7 @@ int main(int argc, char  *argv[])
         exit(1);
     }
     introduce_s_table();
-    bool loop = true;
+    int loop = true;
     statements = (AST**)malloc(sizeof(AST*) * STATEMENTS_SIZE);
     for (int  i = 0; i < STATEMENTS_SIZE; i++)
     {
@@ -53,7 +53,8 @@ int main(int argc, char  *argv[])
     while (true)
     {
         loop = LineToTokens(src);
-        if (!loop) break;
+        if (loop == 2) continue;
+        else if (loop == 0) break;
         statements[i] = parse_AST();
         i++;
     }

@@ -1,5 +1,9 @@
 #include "basicc.h"
 #include "token.h"
+
+#define T_EXIT_SUCCESS 1
+#define T_EXIT_EOF 0
+#define T_EXIT_BLANK 2
 char** tokens = NULL;
 
 unsigned int tokInd =0;
@@ -127,7 +131,7 @@ void get_next_token() {
 }
 
 
-bool LineToTokens(FILE * in) {
+int LineToTokens(FILE * in) {
     if (tokens != NULL) {
         freeTokensArr();    
     }
@@ -138,10 +142,11 @@ bool LineToTokens(FILE * in) {
     wt type = WT_NULL;
     wt last = WT_NULL;
     bool inQuotes = false;
+    bool isBlank = true;
     char cur_char;
     cur_char = fgetc(in);
     if (feof(in)) {
-        return false;
+        return T_EXIT_EOF;
     }
 
     while(cur_char && type != WT_ETC) {
@@ -173,6 +178,8 @@ bool LineToTokens(FILE * in) {
             type = WT_ETC;
         }
 
+        if (type != WT_SPACE && type != WT_NEWLINE) isBlank = false;
+
         if ((last != type && last != WT_NULL) || type == WT_PARENTHESIS) {
             
             if (last != WT_SPACE) {
@@ -184,11 +191,14 @@ bool LineToTokens(FILE * in) {
 
         if (type == WT_NEWLINE) break;
 
+
         word[i] = cur_char;
         i++;
         last = type;
         cur_char = fgetc(in);
     }
+    if (isBlank) return T_EXIT_BLANK;
+
     tokLen = j;
-    return true;
+    return T_EXIT_SUCCESS;
 }
