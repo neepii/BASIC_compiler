@@ -13,7 +13,8 @@ test() {
     rm test1.bas a.out
 }
 
-test "10 LET A = 5 + 5*8\n
+test "
+10 LET A = 5 + 5*8\n
 20 PRINT A\n
 30 END"
 

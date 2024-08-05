@@ -219,6 +219,11 @@ char * put_tac(int num, TAC* tac, int *regArr) {
     return str[1];  // return register char*
 }
 
+void x86_64_to_x86(char * str, char new[40]) {
+    strncpy(new, str, 5);
+    new[1] = 'e';
+}
+
 char * handle_arith_exp(AST * node) {
     assert(node->tag == tag_arith);
     TAC * tac = node->oper.arithExp.lowlvl;
@@ -233,7 +238,7 @@ bool handle_common_statements(AST * node) {
     int ind, id;
     AST * arg = node->oper.commonExp.arg;
     switch (node->oper.commonExp.stmt) {
-    case op_print:
+    case op_print: {
         put("");
         id = arg->oper.symbol;
         ind = S_TABLE->inds[id];
@@ -259,6 +264,7 @@ bool handle_common_statements(AST * node) {
         put("syscall");
         call("newline");
         break;
+    }
     case op_goto:
         put("jmp goto%d",arg->oper.intExp);
         break;
@@ -270,15 +276,18 @@ bool handle_common_statements(AST * node) {
         strncpy(S_TABLE->list[ind]->data.c, "$stringspace", 13);
         S_TABLE->list[ind]->type = type_pointer_var;
         break;
-    case op_let:
+    case op_let: {
         put("");
         id = arg->oper.assignExp.identifier->oper.symbol;
         ind = S_TABLE->inds[id];
         char * value = handle_arith_exp(arg->oper.assignExp.value);
+        char x86[40];
         stackpos += 4;
-        put("mov %s, -%d(%%rbp)",value,stackpos-cur_frame());
+        x86_64_to_x86(value,x86);
+        put("movl %s, -%d(%%rbp)",x86,stackpos-cur_frame());
         S_TABLE->list[ind]->data.addr = stackpos - cur_frame();
         break;
+    }
     case op_end:
         put("");
         end_stack_frame();
