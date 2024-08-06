@@ -1,5 +1,12 @@
-#;rax - buffer
-#;rdi - dword (a integer to convert)
+# use cmp then this function
+# return value is in the rax
+bool_equal:
+	je bool_true
+	mov $0, %rax
+	ret
+bool_true:
+	mov $1, %rax
+	ret
 
 newline:
 	mov $10, %rax
@@ -28,7 +35,8 @@ strlen_end:
 	sub %rcx, %rax
 	ret
 
-
+#;rax - buffer
+#;rdi - dword (a integer to convert)
 uitoa:
 	movq %rax, %rsi
 

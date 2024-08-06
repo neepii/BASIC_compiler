@@ -7,7 +7,7 @@ unsigned int frameArr[50] = {0};
 unsigned int frameInt = 0;
 
 #define REG_COUNT 16
-bool RegIsCleared[REG_COUNT] = {true};
+bool RegIsNotCleared[REG_COUNT] = {false};
 
 #define REG_AX  1 << 0
 #define REG_BX  1 << 1
@@ -101,6 +101,7 @@ static int OccupyReg(int ind, int* regArr) {
 
 static int requestReg(char * tempVar, int * regArr) {
     int tempind = GetTempIndex(tempVar);
+    assert(tempind <= 16);
     return OccupyReg(tempind, regArr);
 }
 
@@ -149,6 +150,7 @@ char * put_tac(int num, TAC* tac, int *regArr) {
     char * str[2];
     Atom args[2] = {tac->arr[num].arg1, tac->arr[num].arg2};
     char temp[2][20] = {0};
+    int new_ind;
 
     for (int i = 0; i < 2; i++)
     {
@@ -172,7 +174,7 @@ char * put_tac(int num, TAC* tac, int *regArr) {
             for (int j = 0; j < REG_COUNT; j++) { // linear search
                 if (regArr[j] == i) {
                     regArr[i] = -1;
-                    RegIsCleared[i] = true;
+                    RegIsNotCleared[i] = false;
                 }
                 break;
             }
@@ -181,11 +183,12 @@ char * put_tac(int num, TAC* tac, int *regArr) {
     }
 
     if (! (isTempVar(args[0]) || isTempVar(args[1])) ) {
-        int new_ind = requestReg(args[1].c, regArr);
+        new_ind = requestReg(args[1].c, regArr);
         char * reg_temp = regs[new_ind];
-        if (!RegIsCleared[new_ind]) put("xor %s, %s", reg_temp, reg_temp);
+	if (RegIsNotCleared[new_ind]) put("xor %s, %s", reg_temp, reg_temp);
+	RegIsNotCleared[new_ind] = true;    
         put("mov %s, %s",str[1], reg_temp);
-        RegIsCleared[new_ind] = false;
+	
         strcpy(args[1].c, reg_temp);
         str[1] = reg_temp;
     }
@@ -211,6 +214,21 @@ char * put_tac(int num, TAC* tac, int *regArr) {
     case op_div:
         handle_one_arg_op(regArr, regs, args, str, "div");
         break;
+    case op_equal:
+	put("cmp %s, %s", str[0], str[1]);
+	if (regArr[0] != -1) {
+	    new_ind = requestReg(args[0].c, regArr);
+	    if (RegIsNotCleared[new_ind]) put("xor %s, %s", regs[new_ind],regs[new_ind]);
+	    RegIsNotCleared[new_ind] = true;    
+	    put("xchg %%rax, %s", regs[new_ind]);
+	    call("bool_equal");
+	    put("xchg %%rax, %s", regs[new_ind]);
+	    str[1] = regs[new_ind]; 
+	} else {
+	    call("bool_equal");
+	    put("mov %%rax, %s", str[1]);
+	}
+	break;
     default:
         break;
     }
@@ -224,7 +242,7 @@ void x86_64_to_x86(char * str, char new[40]) {
     new[1] = 'e';
 }
 
-char * handle_arith_exp(AST * node) {
+char * eval_arith_exp(AST * node) {
     assert(node->tag == tag_arith);
     TAC * tac = node->oper.arithExp.lowlvl;
 
@@ -235,7 +253,7 @@ char * handle_arith_exp(AST * node) {
 }
 
 void handle_if_statement(AST * node) {
-    char * predicate_reg = handle_arith_exp(node->oper.ifstatementExp.predicate);
+    char * predicate_reg = eval_arith_exp(node->oper.ifstatementExp.predicate);
 }
 
 bool handle_common_statements(AST * node) {
@@ -248,7 +266,7 @@ bool handle_common_statements(AST * node) {
         char len[25] = {0};
 
         if (arg->tag != tag_symbol && arg->tag != tag_assign) { //my god what have i done
-            char * reg = handle_arith_exp(arg);
+            char * reg = eval_arith_exp(arg);
             if (match(reg, "%rax") ) {
                 put("mov %%rax, %%rdi");
                 put("mov %s, %%rax", "$digitspace");
@@ -300,7 +318,7 @@ bool handle_common_statements(AST * node) {
         put("");
         id = arg->oper.assignExp.identifier->oper.symbol;
         ind = S_TABLE->inds[id];
-        char * value = handle_arith_exp(arg->oper.assignExp.value);
+        char * value = eval_arith_exp(arg->oper.assignExp.value);
         char x86[40];
         stackpos += 4;
         x86_64_to_x86(value,x86);

@@ -24,6 +24,11 @@ test "
 "
 
 test "
+10 PRINT 10 = 10
+20 END
+"
+
+test "
 10 LET A = 8 * 9 + 41\n
 20 print a\n
 30 LET B = 9 * 2\n
