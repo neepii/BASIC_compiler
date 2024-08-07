@@ -153,7 +153,7 @@ int LineToTokens(FILE * in) {
         cur_char = (char)toupper(cur_char);
 
         if (cur_char == ' ') {
-            type = WT_SPACE;
+            type = (inQuotes) ? WT_QUOTES : WT_SPACE;
         }
         else if (cur_char == '\n') {
             type = WT_NEWLINE;
@@ -169,7 +169,7 @@ int LineToTokens(FILE * in) {
         }
         else if (isQUOTE(cur_char)) {
             type = WT_QUOTES;
-            if (!inQuotes) inQuotes = true;
+            inQuotes = !inQuotes;
         }
         else if (isPARENTHESIS(cur_char)) {
             type = WT_PARENTHESIS;
@@ -184,6 +184,7 @@ int LineToTokens(FILE * in) {
             
             if (last != WT_SPACE) {
                 strncat(tokens[j], word,i);
+                inQuotes = false;
                 j++;
             }
             i=0;
