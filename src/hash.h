@@ -50,8 +50,10 @@ LL_NODE * MakeLLnode(char * name,AST * data);
 void removeLLnode(LL_NODE * head, char * name);
 AST * getLLdata(LL_NODE * head, char* name);
 LL_NODE * appendLLnode(LL_NODE * head, char * name, AST * data);
-void FreeLLIST_all(LL_NODE * l);
+void FreeLLIST_all(LL_NODE ** p);
 hashmap * create_table();
+int getAddr(AST * arg, hashmap * table);
+int getId(char * str, hashmap * table);
 
 /*
     adler-32
@@ -63,5 +65,8 @@ int getIndexByHash(char * str);
 int getIndexBySymbol(AST * node);
 void introduce_s_table();
 void add_symbol(AST * data);
+
+void insert_hashmap_addr(hashmap * table, int data, int id);
+void quicksort(int *arr, int left, int right);
 
 #endif

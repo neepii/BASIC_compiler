@@ -289,10 +289,8 @@ static AST * parse_PrintStatementExp() {
         node->oper.commonExp.arg = parse_StrExp();
         add_symbol(node->oper.commonExp.arg);
     } else if (isVAR(str)) {
-        node->oper.commonExp.arg = parse_VarExp();
-        int h = (int) hash(str) % S_TABLE_SIZE;
-        int id = S_TABLE->list[h]->id;
-        node->oper.commonExp.arg->oper.symbol = id;
+        node->oper.commonExp.arg = AllocNode();
+        node->oper.commonExp.arg->oper.symbol = getId(str,S_TABLE);
         node->oper.commonExp.arg->tag = tag_symbol;
     } else if (isINT(str)) {
         node->oper.commonExp.arg = parse_arith_expression();

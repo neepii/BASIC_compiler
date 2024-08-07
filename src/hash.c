@@ -24,17 +24,50 @@ hashmap * create_table() {
 
 
 void free_s_table() {
-    for (int i = 0; i < S_TABLE_SIZE; i++)
-    {   
-        if (S_TABLE->inds[i] == -1) break;
-        int ind = S_TABLE->inds[i];
-        FreeLLIST_all(S_TABLE->list[ind]);
-        S_TABLE->list[ind] = NULL;
-    
+    int i = 0, ind= S_TABLE->inds[0];
+    quicksort(S_TABLE->inds, 0, S_TABLE_SIZE-1);
+    int last= 0;
+    while(ind != -1) {
+        if (last != ind) FreeLLIST_all(&S_TABLE->list[ind]);
+        last = ind;
+        ind = S_TABLE->inds[++i];
     }
     free(S_TABLE->list);
     free(S_TABLE);
     
+}
+
+void insert_hashmap_addr(hashmap * table, int data, int id) {
+    int ind = table->inds[id];
+    LL_NODE **p = &table->list[ind];
+    while(1) {
+        if ((*p)->id == id) break;
+        else if ((*p) == NULL) assert(0);
+        p = &(*p)->next;
+    }
+    (*p)->data.addr = data;
+}
+
+int getId(char * str, hashmap * table) {
+    int ind = (int) hash(str) % S_TABLE_SIZE;
+    LL_NODE ** p = &S_TABLE->list[ind];
+    while((*p) != NULL) {
+        if (match(str, (*p)->name)) return (*p)->id;
+        p = &(*p)->next;
+    }
+    return -1;
+}
+
+int getAddr(AST * arg, hashmap * table) {
+    assert(arg->tag == tag_symbol);
+    int sym = arg->oper.symbol;
+    int ind = table->inds[sym];
+    LL_NODE ** p = &S_TABLE->list[ind];
+    while((*p) != NULL) {
+        if ((*p)->id == sym) return (*p)->data.addr;
+        p = &(*p)->next;
+    }
+    return -1;
 }
 
 void add_symbol(AST * data) {
@@ -75,20 +108,27 @@ LL_NODE * MakeLLnode(char * name,AST * data) {
     LL_NODE * l = (LL_NODE*)malloc(sizeof(LL_NODE));
     strncpy(l->name, name,strlen(name));
 
-    if (data->tag == tag_int || data->tag == tag_assign) {
+    switch (data->tag)
+    {
+    case tag_int:
         l->data.i = data->oper.intExp;
         l->type = type_int;
-    } else if(data->tag == tag_str) {
+        break;
+    case tag_str:
         strncpy(l->data.c, data->oper.strExp + 1, strlen(data->oper.strExp)-2);
         l->type = type_string;
-    } else if(data->tag == tag_var) {
+        break;
+    case tag_var:
         strncpy(l->data.c, data->oper.varExp, strlen(data->oper.varExp));
         l->type = type_variable;
-    } 
-    else {
+        break;
+    case tag_assign:
+        l->type = type_pointer_var;
+        break;
+    default:
         l->type = type_null;
+        break;
     }
-
     l->next = NULL;
     return l;
 }
@@ -132,17 +172,18 @@ LL_NODE * appendLLnode(LL_NODE * head, char * name, AST * data) {
 
 
 
-void FreeLLIST_all(LL_NODE * l) {
-    if (l->next != NULL) FreeLLIST_all(l->next);
+void FreeLLIST_all(LL_NODE ** p) {
+    LL_NODE * l = *p;
+    if (l->next != NULL) FreeLLIST_all(&l->next);
     free(l); 
 }
 
 
-void quicksort(unsigned long *arr, int left, int right) {
+void quicksort(int *arr, int left, int right) {
     int i, j;
     i = left; j = right;
-    unsigned long pivot = arr[(left+right) /2];  
-    unsigned long temp;
+    int pivot = arr[(left+right) /2];  
+    int temp;
     do{
         while ((arr[i] < pivot) && (i < right)) i++;
         while ((arr[j] > pivot) && (j > left)) j--;
@@ -186,20 +227,20 @@ void test_hashes_on_keywords(){
     }
     rewind(keystream);
     char key[50];
-    unsigned long arrHash[len];
+    int arrHash[len];
     int i = 0;
     while (!feof(keystream))
     {
         fgets(key,50,keystream);
         if (key[strlen(key)-1] == '\n') key[strlen(key)-1] = 0;
-        arrHash[i] = hash(key);
-        printf("#define %s_H %li\n", key, arrHash[i]);
+        arrHash[i] = (int) hash(key);
+        printf("#define %s_H %i\n", key, arrHash[i]);
         i++;
     }
     quicksort(arrHash, 0, len);
     for (int i = 0; i < len-1; i++) {
         if (arrHash[i] == arrHash[i+1]) {
-            printf("WARNING: COLLISION DETECTED: %li", arrHash[i]);
+            printf("WARNING: COLLISION DETECTED: %i", arrHash[i]);
         }
     }
 

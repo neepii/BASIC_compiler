@@ -17,16 +17,19 @@ test "
 10 LET A = 5 + 5*8\n
 20 PRINT A\n
 30 END"
+echo 45
 
 test "
 10 PRINT \"HI\"\n
 20 END
 "
+echo "HI"
 
 test "
 10 PRINT 10 = 10
 20 END
 "
+echo 1
 
 test "
 10 LET A = 8 * 9 + 41\n
@@ -35,6 +38,8 @@ test "
 40 print b\n
 50 end
 "
+echo 113
+echo 18
 
 test "
 10 LET A = 8 * 9 + 41\n
@@ -44,11 +49,15 @@ test "
 50 print b\n
 60 end
 "
+echo 18
+echo 113
+echo 18
 
 test "
 10 PRINT 20 + 20\n
 20 END
 "
+echo 40
 test "10 INPUT A\n
 20 PRINT A\n
 30 END

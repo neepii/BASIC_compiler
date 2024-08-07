@@ -46,11 +46,11 @@ static void data_section() {
     {
         if (S_TABLE->inds[i] == -1) break;   
         ind = S_TABLE->inds[i];
-        LL_NODE * list = S_TABLE->list[ind];
+        LL_NODE ** list = &S_TABLE->list[ind];
         
-        while (S_TABLE->list[ind]->id != i) list = list->next;
-        if (list->type == type_string) {
-            put("str%d: .ascii \"%s\"", list->id, list->data.c);
+        while ((*list)->id != i) list = &S_TABLE->list[ind]->next;
+        if ((*list)->type == type_string) {
+            put("str%d: .ascii \"%s\"", (*list)->id, (*list)->data.c);
         }
     }
 }
@@ -288,23 +288,22 @@ void handle_common_statements(AST * node) {
             multi_mov(REG_AX | REG_SI | REG_DI, "$1", "$digitspace", "$1");
         } else { //is symbol
             int ind = getIndexBySymbol(arg);
-            if (S_TABLE->list[ind]->type == type_string) {
+            switch (S_TABLE->list[ind]->type) {
+            case type_string:
                 sprintf(str, "$str%d", arg->oper.symbol);
                 sprintf(len, "$%ld", strlen(S_TABLE->list[ind]->data.c)+1);
                 multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "$1", len, str, "$1");
-            } else if (S_TABLE->list[ind]->type == type_int) {
-                sprintf(str, "-%d(%%rbp)", S_TABLE->list[ind]->data.addr);
+                break;
+            case type_pointer_var: {
+                int addr = getAddr(arg, S_TABLE);
+                sprintf(str, "-%d(%%rbp)", addr);
                 put("mov %s, %%rax", "$digitspace");
                 put("movl %s, %%edi", str);
                 call("uitoa");
                 put("mov %%rax, %%rdx");
                 multi_mov(REG_AX | REG_SI | REG_DI, "$1", "$digitspace", "$1");
-            } else if (S_TABLE->list[ind]->type == type_pointer_var) {
-                put("mov $stringspace, %%rax");
-                call("strlen");
-                put("mov %%rax, %%rdx");
-                sprintf(str, "%s", S_TABLE->list[ind]->data.c);
-                multi_mov(REG_AX | REG_SI | REG_DI, "$1", str, "$1");
+                break; 
+                }
             }
         }
         
@@ -324,19 +323,18 @@ void handle_common_statements(AST * node) {
         stackpos += 4;
         put("movl %%eax, -%d(%%rbp)", stackpos-cur_frame());
         strncpy(S_TABLE->list[ind]->data.c, "$stringspace", 13);
-        S_TABLE->list[ind]->type = type_int;
         S_TABLE->list[ind]->data.addr = stackpos - cur_frame();
         break;
     }
     case op_let: {
         put("");
-        int ind = getIndexBySymbol(arg->oper.assignExp.identifier);
+        AST * identifier = arg->oper.assignExp.identifier;
         char * value = eval_arith_exp(arg->oper.assignExp.value);
         char x86[40];
         stackpos += 4;
         x86_64_to_x86(value,x86);
         put("movl %s, -%d(%%rbp)",x86,stackpos-cur_frame());
-        S_TABLE->list[ind]->data.addr = stackpos - cur_frame();
+        insert_hashmap_addr(S_TABLE,stackpos- cur_frame(), identifier->oper.symbol);
         break;
     }
     case op_end:
