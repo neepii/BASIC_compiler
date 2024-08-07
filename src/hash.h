@@ -59,6 +59,8 @@ hashmap * create_table();
 unsigned long hash(char * str);
 
 void test_hashes_on_keywords();
+int getIndexByHash(char * str);
+int getIndexBySymbol(AST * node);
 void introduce_s_table();
 void add_symbol(AST * data);
 

@@ -60,6 +60,16 @@ void add_symbol(AST * data) {
     min_available_id++;
 }
 
+int getIndexByHash(char * str) {
+    int h = hash(cur_token()) % S_TABLE_SIZE;
+    return S_TABLE->inds[h];
+}
+int getIndexBySymbol(AST * node) {
+    assert(node->tag == tag_symbol);
+    int id = node->oper.symbol;
+    return S_TABLE->inds[id];
+}
+
 LL_NODE * MakeLLnode(char * name,AST * data) {
 
     LL_NODE * l = (LL_NODE*)malloc(sizeof(LL_NODE));

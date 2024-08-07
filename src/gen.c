@@ -181,17 +181,15 @@ char * put_tac(int num, TAC* tac, int *regArr) {
                 }
                 break;
             }
-
-        }   
+        }
     }
 
     if (! (isTempVar(args[0]) || isTempVar(args[1])) ) {
         new_ind = requestReg(args[1].c, regArr);
         char * reg_temp = regs[new_ind];
 	if (RegIsNotCleared[new_ind]) put("xor %s, %s", reg_temp, reg_temp);
-	RegIsNotCleared[new_ind] = true;    
+	    RegIsNotCleared[new_ind] = true;    
         put("mov %s, %s",str[1], reg_temp);
-	
         strcpy(args[1].c, reg_temp);
         str[1] = reg_temp;
     }
@@ -259,17 +257,17 @@ void handle_if_statement(AST * node) {
     static int if_ind = 0;
     char * predicate_reg = eval_arith_exp(node->oper.ifstatementExp.predicate);
     put("cmp $1, %s", predicate_reg);
-    put("jne .false%d",if_ind);
+    put("jge .false%d",if_ind);
     handle_statements(node->oper.ifstatementExp.thenExp);
     
     fprintf(tar, ".false%d:", if_ind);
     if (node->oper.ifstatementExp.elseExp) handle_statements(node->oper.ifstatementExp.elseExp);
     put("");
     if_ind++;
+
 }
 
-bool handle_common_statements(AST * node) {
-    int ind = 0, id= 0;
+void handle_common_statements(AST * node) {
     AST * arg = node->oper.commonExp.arg;
     switch (node->oper.commonExp.stmt) {
     case op_print: {
@@ -289,10 +287,9 @@ bool handle_common_statements(AST * node) {
             put("mov %%rax, %%rdx");
             multi_mov(REG_AX | REG_SI | REG_DI, "$1", "$digitspace", "$1");
         } else { //is symbol
-            id = arg->oper.symbol;
-            ind = S_TABLE->inds[id];
+            int ind = getIndexBySymbol(arg);
             if (S_TABLE->list[ind]->type == type_string) {
-                sprintf(str, "$str%d", id);
+                sprintf(str, "$str%d", arg->oper.symbol);
                 sprintf(len, "$%ld", strlen(S_TABLE->list[ind]->data.c)+1);
                 multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "$1", len, str, "$1");
             } else if (S_TABLE->list[ind]->type == type_int) {
@@ -318,23 +315,22 @@ bool handle_common_statements(AST * node) {
     case op_goto:
         put("jmp goto%d",arg->oper.intExp);
         break;
-    case op_input:
-        id = arg->oper.symbol;
-        ind = S_TABLE->inds[id];
+    case op_input: {
+        int ind = getIndexBySymbol(arg);
         multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "$0", "$32", "$stringspace", "$0");
         put("syscall");
-	put("mov $stringspace, %rdi");
-	call("atoi");
-	stackpos += 4;
-	put("mov %rax, -%d(%%rbp)", stackpos-cur_frame());
+        put("mov $stringspace, %rdi");
+        call("atoi");
+        stackpos += 4;
+        put("movl %%eax, -%d(%%rbp)", stackpos-cur_frame());
         strncpy(S_TABLE->list[ind]->data.c, "$stringspace", 13);
         S_TABLE->list[ind]->type = type_int;
-	S_TABLE->list[ind]->data.addr = stackpos - cur_frame();
+        S_TABLE->list[ind]->data.addr = stackpos - cur_frame();
         break;
+    }
     case op_let: {
         put("");
-        id = arg->oper.assignExp.identifier->oper.symbol;
-        ind = S_TABLE->inds[id];
+        int ind = getIndexBySymbol(arg->oper.assignExp.identifier);
         char * value = eval_arith_exp(arg->oper.assignExp.value);
         char x86[40];
         stackpos += 4;
@@ -348,11 +344,11 @@ bool handle_common_statements(AST * node) {
         end_stack_frame();
         multi_mov(REG_AX | REG_DI, "$60", "$0");
         put("syscall");
-        return true;
+        hasEnd = true;
     default:
         break;
     }
-    return false;
+    
 }
 static void handle_one_word_statements(AST *node) {
     switch (node->oper.one_word_stmt)
@@ -370,7 +366,7 @@ static void handle_statements(AST *node) {
     switch (node->tag)
     {
     case tag_common_statement:
-        hasEnd = handle_common_statements(node);
+        handle_common_statements(node);
         break;
     case tag_one_word_statement:
         handle_one_word_statements(node);

@@ -5,6 +5,6 @@ void make_target_src();
 void compile(char * output_name);
 void include(char * path);
 char * eval_arith_exp(AST *node);
-bool handle_common_statements(AST *node);
+void handle_common_statements(AST *node);
 
 #endif
