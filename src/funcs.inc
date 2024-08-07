@@ -1,3 +1,34 @@
+# rdi - string buffer
+# uses rax rsi
+atoi:
+
+	xor %rax, %rax
+atoi_convert:
+	movzx (%rdi), %rsi
+	test %rsi, %rsi
+	jz atoi_end
+
+	cmp $10, %rsi
+	je atoi_end
+
+	cmp $48, %rsi
+	jl atoi_error
+
+	cmp $57, %rsi
+	jg atoi_error
+
+	sub $48, %rsi
+	imul $10, %rax
+	add %rsi, %rax
+
+	inc %rdi
+	jmp atoi_convert
+atoi_error:
+	mov $-1, %rax
+atoi_end:
+	ret
+	
+
 # use cmp then this function
 # return value is in the rax
 bool_equal:
@@ -20,6 +51,7 @@ newline:
 
 #;rax - buffer address
 #;return in rax
+# uses rbx and rcx
 strlen:
 	mov %rax, %rcx
 strlen_loop:
@@ -37,6 +69,7 @@ strlen_end:
 
 #;rax - buffer
 #;rdi - dword (a integer to convert)
+#uses rsi rdi r8 r9 rcx rdx
 uitoa:
 	movq %rax, %rsi
 

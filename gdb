@@ -1,1 +1,0 @@
-gdb exec -x .gdbinit

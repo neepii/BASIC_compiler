@@ -1,3 +1,4 @@
+
 #include "basicc.h"
 FILE * tar;
 unsigned int stackpos = 0;
@@ -296,7 +297,7 @@ bool handle_common_statements(AST * node) {
                 multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "$1", len, str, "$1");
             } else if (S_TABLE->list[ind]->type == type_int) {
                 sprintf(str, "-%d(%%rbp)", S_TABLE->list[ind]->data.addr);
-                put("movl %s, %%eax", "$digitspace");
+                put("mov %s, %%rax", "$digitspace");
                 put("movl %s, %%edi", str);
                 call("uitoa");
                 put("mov %%rax, %%rdx");
@@ -322,8 +323,13 @@ bool handle_common_statements(AST * node) {
         ind = S_TABLE->inds[id];
         multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "$0", "$32", "$stringspace", "$0");
         put("syscall");
+	put("mov $stringspace, %rdi");
+	call("atoi");
+	stackpos += 4;
+	put("mov %rax, -%d(%%rbp)", stackpos-cur_frame());
         strncpy(S_TABLE->list[ind]->data.c, "$stringspace", 13);
-        S_TABLE->list[ind]->type = type_pointer_var;
+        S_TABLE->list[ind]->type = type_int;
+	S_TABLE->list[ind]->data.addr = stackpos - cur_frame();
         break;
     case op_let: {
         put("");
