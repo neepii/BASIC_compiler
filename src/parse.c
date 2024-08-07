@@ -265,6 +265,7 @@ static AST * parse_IfStatementExp() {
         get_next_token();
         node->oper.ifstatementExp.thenExp = parse_AST();
     }
+    get_next_token();
     if (match(cur_token(), "ELSE")) {
         get_next_token();
         node->oper.ifstatementExp.elseExp = parse_AST();

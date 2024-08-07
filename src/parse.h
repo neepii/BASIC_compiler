@@ -101,7 +101,7 @@ typedef struct exp
         } numline;
         struct {
             struct exp* left;
-            struct exp* right;
+	    struct exp* right;
             enum operator operator;
         } binaryExp;
         struct {

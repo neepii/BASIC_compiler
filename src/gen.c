@@ -8,6 +8,7 @@ unsigned int frameInt = 0;
 
 #define REG_COUNT 16
 bool RegIsNotCleared[REG_COUNT] = {false};
+bool hasEnd = false;
 
 #define REG_AX  1 << 0
 #define REG_BX  1 << 1
@@ -29,7 +30,8 @@ bool RegIsNotCleared[REG_COUNT] = {false};
 static void put(char * format, ...);
 static void pop(char * str);
 static void push(char * str);
-static void call(char * str);
+static void call(char *str);
+static void handle_statements(AST *node);
 
 
 
@@ -253,7 +255,16 @@ char * eval_arith_exp(AST * node) {
 }
 
 void handle_if_statement(AST * node) {
+    static int if_ind = 0;
     char * predicate_reg = eval_arith_exp(node->oper.ifstatementExp.predicate);
+    put("cmp $1, %s", predicate_reg);
+    put("jne .false%d",if_ind);
+    handle_statements(node->oper.ifstatementExp.thenExp);
+    
+    fprintf(tar, ".false%d:", if_ind);
+    if (node->oper.ifstatementExp.elseExp) handle_statements(node->oper.ifstatementExp.elseExp);
+    put("");
+    if_ind++;
 }
 
 bool handle_common_statements(AST * node) {
@@ -344,27 +355,12 @@ static void handle_one_word_statements(AST *node) {
         break;
     case op_wend:
         break;
-    
-    
     default:
         break;
     }
 }
 
-static void start() {
-    int i= 0;
-    bool hasEnd = false;
-    fprintf(tar, "_start:\n");
-    new_stack_frame();
-    while (statements[i]) {
-    AST * node = statements[i];
-    if (node->tag == tag_numline && node->oper.numline.isGotoLabel) {
-        fprintf(tar, "goto%d:", node->oper.numline.value);
-        node = node->oper.numline.next;
-    }
-    else if (node->tag == tag_numline) {   
-        node = node->oper.numline.next;
-    }
+static void handle_statements(AST *node) {
     switch (node->tag)
     {
     case tag_common_statement:
@@ -379,6 +375,21 @@ static void start() {
     default:
         break;
     }
+
+}
+
+static void start() {
+    int i= 0;
+    fprintf(tar, "_start:\n");
+    new_stack_frame();
+    while (statements[i]) {
+    AST * node = statements[i];
+    if (node->tag == tag_numline && node->oper.numline.isGotoLabel) {
+        fprintf(tar, "goto%d:", node->oper.numline.value);
+        node = node->oper.numline.next;
+    }
+    else if (node->tag == tag_numline) node = node->oper.numline.next;
+    handle_statements(node);
     i++;
     }
     if (!hasEnd) fprintf(stderr, "ERROR: no end statement\n");
