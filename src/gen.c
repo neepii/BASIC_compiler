@@ -1,4 +1,3 @@
-
 #include "basicc.h"
 FILE * tar;
 unsigned int stackpos = 0;
@@ -303,7 +302,7 @@ void handle_common_statements(AST * node) {
             switch (S_TABLE->list[ind]->type) {
             case type_string:
                 sprintf(str, "$str%d", arg->oper.symbol);
-                sprintf(len, "$%ld", strlen(S_TABLE->list[ind]->data.c)+1);
+                sprintf(len, "$%ld", strlen(S_TABLE->list[ind]->data.c));
                 multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "$1", len, str, "$1");
                 break;
             case type_pointer_var: {
