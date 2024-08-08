@@ -73,8 +73,7 @@ strlen_end:
 uitoa:
 	movq %rax, %rsi
 
-	movq %rdi, %rax
-
+	movl %edi, %eax
 	cmp $0, %rax
  	jnz uitoa_convert_reg
 	movb $48, (%rsi)
@@ -100,7 +99,7 @@ uitoa_loop:
 	add %rcx, %rsi
 
 	movb $0,(%rsi)
-	mov %rdi, %rax
+	movl %edi, %eax
 	dec %ecx
 uitoa_convert:
 	xor %rdx, %rdx

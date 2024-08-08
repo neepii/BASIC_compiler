@@ -344,6 +344,7 @@ void handle_common_statements(AST * node) {
         char x86[40];
         stackpos += 4;
         x86_64_to_x86(value,x86);
+        put("sub $4, %rsp");
         put("movl %s, -%d(%%rbp)",x86,stackpos-cur_frame());
         insert_hashmap_addr(S_TABLE,stackpos- cur_frame(), identifier->oper.symbol);
         break;
