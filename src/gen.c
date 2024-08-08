@@ -33,13 +33,14 @@ static void pop(char * str);
 static void push(char * str);
 static void call(char *str);
 static void handle_statements(AST *node);
+static bool getLastChar(Atom atom, char c);
 
 
 
 
 static void data_section() {
     int ind = 0;
-    put(".lcomm digitspace, 8");
+    put(".lcomm digitspace, 16");
     put(".lcomm bytestorage, 1");
     put(".lcomm stringspace, 32");
     for (int i = 0; i < S_TABLE_SIZE; i++)
@@ -103,7 +104,7 @@ static int OccupyReg(int ind, int* regArr) {
 }
 
 static int requestReg(char * tempVar, int * regArr) {
-    int tempind = GetTempIndex(tempVar);
+    int tempind = postfix_GetIndex(tempVar);
     assert(tempind <= 16);
     return OccupyReg(tempind, regArr);
 }
@@ -164,6 +165,13 @@ char * put_tac(int num, TAC* tac, int *regArr) {
                     break;
                 }
             }
+        }
+        else if (isSymbolVar(args[i])) {
+            int id = postfix_GetIndex(args[i].c);
+            int addr = getAddrByID(id, S_TABLE);
+            sprintf(temp[i], "-%d(%%rbp)", addr);
+            str[i] = temp[i];
+
         } else {
             sprintf(temp[i], "$%lld", args[i].i);
             str[i] = temp[i];
@@ -250,18 +258,22 @@ char * eval_arith_exp(AST * node) {
     int * isRegOccup = (int*) malloc(sizeof(int) * REG_COUNT);
     for (int i = 0; i < REG_COUNT; i++) isRegOccup[i] = -1; // -1 == register is free
     
-    return put_tac(tac->len-1, tac, isRegOccup);
+    char * str = put_tac(tac->len-1, tac, isRegOccup);
+    free(isRegOccup);
+    return str;
 }
 
 void handle_if_statement(AST * node) {
+    put("");
     static int if_ind = 0;
     char * predicate_reg = eval_arith_exp(node->oper.ifstatementExp.predicate);
     put("cmp $1, %s", predicate_reg);
-    put("jge .false%d",if_ind);
+    put("jl .false%d",if_ind);
     handle_statements(node->oper.ifstatementExp.thenExp);
-    
+    put("jmp .end%d", if_ind);
     fprintf(tar, ".false%d:", if_ind);
     if (node->oper.ifstatementExp.elseExp) handle_statements(node->oper.ifstatementExp.elseExp);
+    fprintf(tar, ".end%d:", if_ind);
     put("");
     if_ind++;
 
@@ -295,7 +307,7 @@ void handle_common_statements(AST * node) {
                 multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "$1", len, str, "$1");
                 break;
             case type_pointer_var: {
-                int addr = getAddr(arg, S_TABLE);
+                int addr = getAddrByAST(arg, S_TABLE);
                 sprintf(str, "-%d(%%rbp)", addr);
                 put("mov %s, %%rax", "$digitspace");
                 put("movl %s, %%edi", str);

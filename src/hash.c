@@ -58,9 +58,8 @@ int getId(char * str, hashmap * table) {
     return -1;
 }
 
-int getAddr(AST * arg, hashmap * table) {
-    assert(arg->tag == tag_symbol);
-    int sym = arg->oper.symbol;
+int getAddrByID(int sym, hashmap * table) {
+
     int ind = table->inds[sym];
     LL_NODE ** p = &S_TABLE->list[ind];
     while((*p) != NULL) {
@@ -68,6 +67,11 @@ int getAddr(AST * arg, hashmap * table) {
         p = &(*p)->next;
     }
     return -1;
+}
+int getAddrByAST(AST * arg, hashmap* table) {
+    assert(arg->tag == tag_symbol);
+    int sym = arg->oper.symbol;
+    return getAddrByID(sym, table);
 }
 
 void add_symbol(AST * data) {
@@ -119,7 +123,6 @@ LL_NODE * MakeLLnode(char * name,AST * data) {
         l->type = type_string;
         break;
     case tag_var:
-        strncpy(l->data.c, data->oper.varExp, strlen(data->oper.varExp));
         l->type = type_variable;
         break;
     case tag_assign:

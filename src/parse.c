@@ -31,6 +31,7 @@ static int get_predecense(char * op);
 static bool compare_prec(int new_prec, int prec);
 static AST * iter_parse_exp(int min_prec);
 static AST * recursive_parse_exp(AST * left, int min_prec);
+static bool getLastChar(Atom atom, char c);
 
 static void print_op(int op) {
     switch (op)
@@ -465,9 +466,16 @@ static AST * parse_VarExp() {
     if (isINT(cur_token())) {
         parse_syntax_error("numbers found in variable name");
     }
+    hashmap * table = S_TABLE;
+    int id = getId(cur_token(), table);
     AST * node = AllocNode();
-    strcpy(node->oper.varExp, cur_token());
-    node->tag = tag_var;
+    if (id != -1) {
+        node->tag = tag_symbol;
+        node->oper.symbol = id;
+    } else {
+	    strcpy(node->oper.varExp, cur_token());
+	    node->tag = tag_var;
+    }
     return node;
 }
 
@@ -572,14 +580,21 @@ int p_atoi(char *str, int count) {
     return num;
 }
 
-
-
-bool isTempVar(Atom atom) {
+static bool getLastChar(Atom atom, char c) {
     if (atom.i == 0) return false;
     int len = strlen(atom.c);
-    return ((atom.c[len-1] = 't') && (isINT(atom.c))); // [0-9]t is reserved for temp vars in TAC
+    return ((atom.c[len-1] == c) && (isINT(atom.c))); // [0-9]t is reserved for temp vars in TAC
 }
-int GetTempIndex(char * str) { 
+bool isSymbolVar(Atom atom) {
+    return getLastChar(atom, 's');
+}
+bool isTempVar(Atom atom) {
+    return getLastChar(atom, 't');
+}
+
+
+
+int postfix_GetIndex(char * str) { 
     return p_atoi(str, strlen(str)-1);
 }
 
@@ -588,17 +603,17 @@ static void FillLiveArr(TAC * tac) {
     for (int i = 0; i < tac->len; i++)
     {
         if (isTempVar(tac->arr[i].result)) {
-            tempind = GetTempIndex(tac->arr[i].result.c);                                   // index
+            tempind = postfix_GetIndex(tac->arr[i].result.c);                                   // index
             if (tac->LiveInterval[tempind][0] == -1) tac->LiveInterval[tempind][0] = i;     // update start interval if it has default value
             tac->LiveInterval[tempind][1] = i;                                              // update end interval
         }
         if (isTempVar(tac->arr[i].arg1)) {
-            tempind = GetTempIndex(tac->arr[i].arg1.c); 
+            tempind = postfix_GetIndex(tac->arr[i].arg1.c); 
             if (tac->LiveInterval[tempind][0] == -1) tac->LiveInterval[tempind][0] = i;
             tac->LiveInterval[tempind][1] = i; 
         }
         if (isTempVar(tac->arr[i].arg2)) {
-            tempind = GetTempIndex(tac->arr[i].arg2.c); 
+            tempind = postfix_GetIndex(tac->arr[i].arg2.c); 
             if (tac->LiveInterval[tempind][0] == -1) tac->LiveInterval[tempind][0] = i;
             tac->LiveInterval[tempind][1] = i; 
         }
@@ -620,20 +635,25 @@ static AST * parse_arith_expression() {
     return exp;
 }
 
-char * FillTac(AST * ast, TAC * tac, char * ind) {
+static char * FillTac(AST * ast, TAC * tac, int * ind) {
     char * left = NULL;
     char * right = NULL;
     if (ast->oper.binaryExp.left->tag == tag_binary) left = FillTac(ast->oper.binaryExp.left, tac, ind);
     if (ast->oper.binaryExp.right->tag == tag_binary) right = FillTac(ast->oper.binaryExp.right, tac, ind);
 
+
     Atom arg1, arg2, res;
     if (left) strcpy(arg1.c, left);
+    else if (ast->oper.binaryExp.left->tag == tag_symbol) 
+        sprintf(arg1.c, "%ds", ast->oper.binaryExp.left->oper.symbol); // s for symbol
     else arg1.i = ast->oper.binaryExp.left->oper.intExp;
+    
     if (right) strcpy(arg2.c, right);
+    else if (ast->oper.binaryExp.right->tag == tag_symbol) 
+        sprintf(arg2.c, "%ds", ast->oper.binaryExp.right->oper.symbol);
     else arg2.i = ast->oper.binaryExp.right->oper.intExp;
-    assert(arg1.i && arg2.i);
 
-    sprintf(res.c, "%dt", *ind);
+    sprintf(res.c, "%dt", *ind); // t for temp
     tac->arr[*ind].operator = ast->oper.binaryExp.operator;
     tac->arr[*ind].arg1.i = arg1.i;
     tac->arr[*ind].arg2.i = arg2.i;
@@ -654,7 +674,13 @@ TAC * ASTtoTAC(AST * node) {
     if (node->tag != tag_binary) {    
         TAC_Entry * arr = (TAC_Entry *) malloc(sizeof(TAC_Entry));
         arr->operator = op_null; // if null then use only arg1
-        arr->arg2.i = node->oper.intExp;
+        if (node->tag == tag_symbol) {
+            char temp[10];
+            sprintf(temp, "%ds", node->oper.symbol);
+            strcpy(arr->arg2.c, temp);
+        } else {
+            arr->arg2.i = node->oper.intExp;
+        }
         arr->arg1.i = 0;
         arr->result.i = 0;
         tac->arr = arr;
@@ -666,7 +692,7 @@ TAC * ASTtoTAC(AST * node) {
     TAC_Entry * arr = (TAC_Entry *) malloc(sizeof(TAC_Entry) * count);
     tac->arr = arr;
     tac->len = count;
-    char * ind = (char*) malloc(sizeof(char));
+    int * ind = (int*) malloc(sizeof(int));
     *ind = 0;
 
     FillTac(node, tac, ind);

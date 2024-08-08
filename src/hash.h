@@ -52,20 +52,19 @@ AST * getLLdata(LL_NODE * head, char* name);
 LL_NODE * appendLLnode(LL_NODE * head, char * name, AST * data);
 void FreeLLIST_all(LL_NODE ** p);
 hashmap * create_table();
-int getAddr(AST * arg, hashmap * table);
-int getId(char * str, hashmap * table);
+int getId(char *str, hashmap *table);
 
 /*
     adler-32
 */
 unsigned long hash(char * str);
-
 void test_hashes_on_keywords();
 int getIndexByHash(char * str);
 int getIndexBySymbol(AST * node);
 void introduce_s_table();
 void add_symbol(AST * data);
-
+int getAddrByAST(AST * arg, hashmap* table);
+int getAddrByID(int sym, hashmap * table);
 void insert_hashmap_addr(hashmap * table, int data, int id);
 void quicksort(int *arr, int left, int right);
 

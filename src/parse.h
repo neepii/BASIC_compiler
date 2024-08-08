@@ -146,9 +146,9 @@ void parse_syntax_error(char* str);
 bool match(char*, const char*);
 void FreeAST(AST * ast);
 TAC * ASTtoTAC(AST * node);
+int postfix_GetIndex(char * str);
+bool isSymbolVar(Atom atom);
 bool isTempVar(Atom atom);
-int GetTempIndex(char * str);
-char * itoa(int num);
 
 
 
