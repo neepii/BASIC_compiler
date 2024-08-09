@@ -19,6 +19,7 @@ hashmap * create_table() {
     hm->list[i] = NULL;
     hm->inds[i] = -1;
   }
+  hm->next = NULL;
   return hm;
 }
 

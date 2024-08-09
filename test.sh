@@ -22,7 +22,7 @@ echo 45
 test "
 10 PRINT \"HI\"\n
 20 END
-"
+n"
 echo "HI"
 
 test "
@@ -62,3 +62,10 @@ test "10 INPUT A\n
 20 PRINT A\n
 30 END
 "
+test "
+10 FOR I = 0 TO 5 STEP 1\n
+20 PRINT \"HI\"\n
+30 NEXT I\n
+40 END
+"
+

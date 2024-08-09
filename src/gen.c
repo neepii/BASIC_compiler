@@ -1,13 +1,20 @@
+
 #include "basicc.h"
 FILE * tar;
 unsigned int stackpos = 0;
 AST** statements;
 char * tar_path_name;
+
+//stacks
 unsigned int frameArr[50] = {0};
 unsigned int frameInt = 0;
+unsigned char counterArr[50] = {0};
+unsigned char counterInt = 0;
+unsigned char counterAddr = 0;
 
 #define REG_COUNT 16
 bool RegIsNotCleared[REG_COUNT] = {false};
+bool RegIsOccupied[REG_COUNT] = {false}; //global
 bool hasEnd = false;
 
 #define REG_AX  1 << 0
@@ -28,11 +35,14 @@ bool hasEnd = false;
 #define REG_R15 1 << 15
 
 static void put(char * format, ...);
+static void put_notab(char * format, ...);
 static void pop(char * str);
 static void push(char * str);
 static void call(char *str);
 static void handle_statements(AST *node);
 static bool getLastChar(Atom atom, char c);
+static void handle_one_arg_op(int* regArr, Atom args[2], char * str[2], char * op);
+static char * getReg(int ind);
 
 
 
@@ -59,14 +69,22 @@ static void data_section() {
 static void multi_mov(int regs, ...) {
     va_list va;
     va_start(va, regs);
-    if (regs & REG_AX) put("mov %s, %%rax", va_arg(va, char*));
-    if (regs & REG_BX) put("mov %s, %%rbx", va_arg(va, char*));
-    if (regs & REG_CX) put("mov %s, %%rcx", va_arg(va, char*));
-    if (regs & REG_DX) put("mov %s, %%rdx", va_arg(va, char*));
-    if (regs & REG_SI) put("mov %s, %%rsi", va_arg(va, char*));
-    if (regs & REG_DI) put("mov %s, %%rdi", va_arg(va, char*));
-    if (regs & REG_SP) put("mov %s, %%rsp", va_arg(va, char*));
-    if (regs & REG_BP) put("mov %s, %%rbp", va_arg(va, char*));
+    bool pushed[REG_COUNT] = {false};
+    for (int i = 0; i < REG_COUNT; i++) {
+        int bit = 1 << i;
+        char * reg_p;
+        if (regs & bit) {
+            if (RegIsOccupied[i]) {
+                put("push %s", getReg(i));
+                pushed[i] = true;
+            }
+            put("mov %s, %s", va_arg(va, char*), getReg(i));
+        }
+    }
+    put("syscall");
+    for (int i = REG_COUNT-1; i >= 0; i--) {
+        if (pushed[i]) put("pop %s", getReg(i));
+    }
     va_end(va);
 }
 
@@ -78,7 +96,6 @@ static void new_stack_frame() {
         fprintf(stderr, "stack overflow\n");
     }
     frameArr[++frameInt] = stackpos;
-
 }
 static void end_stack_frame() {
     put("mov %%rsp, %%rbp");
@@ -92,14 +109,24 @@ unsigned int cur_frame() {
 
 static int OccupyReg(int ind, int* regArr) {
     int i;
-    for (i = 0; i < REG_COUNT; i++) {
-        if (i == 6 || i ==7) continue; // bp and sp regs
-        if (regArr[i] == -1) {
-            regArr[i] = ind;
-            break;
+    if (regArr == NULL) { //global
+        for (i = 0; i< REG_COUNT; i++) {
+            if (i == 6 || i ==7) continue; // bp and sp regs
+            if (!RegIsOccupied[i]) {
+                RegIsOccupied[i] = true;
+                return i;
+            }
+        }
+    } else {
+        for (i = 0; i < REG_COUNT; i++) {
+            if (i == 6 || i ==7) continue; 
+            if (regArr[i] == -1 && !RegIsOccupied[i]) {
+                regArr[i] = ind;
+                return i;
+            }
         }
     }
-    return i;
+    return -1;
 }
 
 static int requestReg(char * tempVar, int * regArr) {
@@ -108,11 +135,11 @@ static int requestReg(char * tempVar, int * regArr) {
     return OccupyReg(tempind, regArr);
 }
 
-static void handle_one_arg_op(int* regArr, char * regs[16], Atom args[2], char * str[2], char * op) {
+static void handle_one_arg_op(int* regArr, Atom args[2], char * str[2], char * op) {
     bool pop_b = false;
     int temporary = requestReg(str[1], regArr);
     if (regArr[0] != -1 && !match(str[1], "%rax")) {
-        put("xchg %%rax, %s", regs[temporary]);
+        put("xchg %%rax, %s",getReg(temporary));
 
         if (regArr[3] != -1) {
             push("%rdx");
@@ -124,15 +151,15 @@ static void handle_one_arg_op(int* regArr, char * regs[16], Atom args[2], char *
         if (pop_b)  pop("%rdx");
         put("mov %%rax, %s", str[1]);
 
-        put("mov %s, %%rax", regs[temporary]);
+        put("mov %s, %%rax", getReg(temporary));
     } else {
         assert(regArr[0] != -1);
         
         if (regArr[3] != -1) { //rdx is occupied
             push("%rdx");
         }
-        put("mov %s, %s", str[0],regs[temporary]);
-        put("%s %s",op, regs[temporary]);
+        put("mov %s, %s", str[0], getReg(temporary));
+        put("%s %s",op, getReg(temporary));
 
         if (!match(str[1], "%rax")) put("mov %%rax, %s", str[1]);
         if (pop_b) pop("%rdx");
@@ -140,7 +167,7 @@ static void handle_one_arg_op(int* regArr, char * regs[16], Atom args[2], char *
     regArr[temporary] = -1;
 }
 
-char * put_tac(int num, TAC* tac, int *regArr) {
+static char * getReg(int ind) {
     static char * regs[REG_COUNT] = {
         "%rax", "%rbx", "%rcx", "%rdx",
         "%rsi", "%rdi",
@@ -150,6 +177,10 @@ char * put_tac(int num, TAC* tac, int *regArr) {
         "%r8", "%r9", "%r10", "%r11",
         "%r12", "%r13", "%r14", "%r15"
     };
+    return regs[ind];
+}
+
+char * put_tac(int num, TAC* tac, int *regArr) {
     char * str[2];
     Atom args[2] = {tac->arr[num].arg1, tac->arr[num].arg2};
     char temp[2][20] = {0};
@@ -193,8 +224,8 @@ char * put_tac(int num, TAC* tac, int *regArr) {
 
     if (! (isTempVar(args[0]) || isTempVar(args[1])) ) {
         new_ind = requestReg(args[1].c, regArr);
-        char * reg_temp = regs[new_ind];
-	if (RegIsNotCleared[new_ind]) put("xor %s, %s", reg_temp, reg_temp);
+        char * reg_temp = getReg(new_ind);
+	    if (RegIsNotCleared[new_ind]) put("xor %s, %s", reg_temp, reg_temp);
 	    RegIsNotCleared[new_ind] = true;    
         put("mov %s, %s",str[1], reg_temp);
         strcpy(args[1].c, reg_temp);
@@ -217,21 +248,22 @@ char * put_tac(int num, TAC* tac, int *regArr) {
         put("sub %s, %s", str[0], str[1]);
         break;
     case op_mul:
-        handle_one_arg_op(regArr, regs, args, str, "mul");
+        handle_one_arg_op(regArr, args, str, "mul");
         break;
     case op_div:
-        handle_one_arg_op(regArr, regs, args, str, "div");
+        handle_one_arg_op(regArr, args, str, "div");
         break;
     case op_equal:
 	put("cmp %s, %s", str[0], str[1]);
 	if (regArr[0] != -1) {
 	    new_ind = requestReg(args[0].c, regArr);
-	    if (RegIsNotCleared[new_ind]) put("xor %s, %s", regs[new_ind],regs[new_ind]);
+        char * reg = getReg(new_ind);
+	    if (RegIsNotCleared[new_ind]) put("xor %s, %s", reg,reg);
 	    RegIsNotCleared[new_ind] = true;    
-	    put("xchg %%rax, %s", regs[new_ind]);
+	    put("xchg %%rax, %s", reg);
 	    call("bool_equal");
-	    put("xchg %%rax, %s", regs[new_ind]);
-	    str[1] = regs[new_ind]; 
+	    put("xchg %%rax, %s", reg);
+	    str[1] = reg; 
 	} else {
 	    call("bool_equal");
 	    put("mov %%rax, %s", str[1]);
@@ -254,13 +286,42 @@ char * eval_arith_exp(AST * node) {
     assert(node->tag == tag_arith);
     TAC * tac = node->oper.arithExp.lowlvl;
 
-    int * isRegOccup = (int*) malloc(sizeof(int) * REG_COUNT);
-    for (int i = 0; i < REG_COUNT; i++) isRegOccup[i] = -1; // -1 == register is free
+    int * LocalRegOccup = (int*) malloc(sizeof(int) * REG_COUNT);
+    for (int i = 0; i < REG_COUNT; i++) LocalRegOccup[i] = -1; // -1 == register is free
     
-    char * str = put_tac(tac->len-1, tac, isRegOccup);
-    free(isRegOccup);
+    char * str = put_tac(tac->len-1, tac, LocalRegOccup);
+    free(LocalRegOccup);
     return str;
 }
+
+static void handle_for_statement(AST * node) {
+    put("");
+    AST * assignment = node->oper.forstatementExp.initial;
+    int sym = assignment->oper.assignExp.identifier->oper.symbol;
+    char * values[3];
+    int address[3];
+    char x86[3][40];
+    AST * nodes[3] = {
+        assignment->oper.assignExp.value,
+        node->oper.forstatementExp.final,
+        (node->oper.forstatementExp.step) ? node->oper.forstatementExp.step : NULL
+    };
+    
+    put("sub $%d, %rsp", (nodes[3] != NULL) ? 12 : 8);
+    for (int i = 0; i < 3; i++) {
+        if (nodes[i] == NULL) continue;
+        values[i] = eval_arith_exp(nodes[i]);
+        x86_64_to_x86(values[i],x86[i]);
+        stackpos += 4;
+        address[i]= stackpos - cur_frame();
+        put("movl %s, -%d(%%rbp)",x86[i],address[i]);        
+    }
+
+    put("jmp for_cmp%d", sym);
+    put_notab("for_iter%d:", sym);
+    counterAddr = address[0];
+}
+
 
 void handle_if_statement(AST * node) {
     put("");
@@ -270,9 +331,9 @@ void handle_if_statement(AST * node) {
     put("jl .false%d",if_ind);
     handle_statements(node->oper.ifstatementExp.thenExp);
     put("jmp .end%d", if_ind);
-    fprintf(tar, ".false%d:", if_ind);
+    put_notab(".false%d:", if_ind);
     if (node->oper.ifstatementExp.elseExp) handle_statements(node->oper.ifstatementExp.elseExp);
-    fprintf(tar, ".end%d:", if_ind);
+    put_notab(".end%d:", if_ind);
     put("");
     if_ind++;
 
@@ -292,7 +353,8 @@ void handle_common_statements(AST * node) {
                 put("mov %%rax, %%rdi");
                 put("mov %s, %%rax", "$digitspace");
             } else {
-                multi_mov(REG_AX | REG_DI, "$digitspace", reg);
+                put("mov $digitspace, %%rax");
+                put("mov %s, %%rdi", reg);
             }
             call("uitoa");
             put("mov %%rax, %%rdx");
@@ -317,8 +379,6 @@ void handle_common_statements(AST * node) {
                 }
             }
         }
-        
-        put("syscall");
         call("newline");
         break;
     }
@@ -328,7 +388,6 @@ void handle_common_statements(AST * node) {
     case op_input: {
         int ind = getIndexBySymbol(arg);
         multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "$0", "$32", "$stringspace", "$0");
-        put("syscall");
         put("mov $stringspace, %rdi");
         call("atoi");
         stackpos += 4;
@@ -349,12 +408,26 @@ void handle_common_statements(AST * node) {
         insert_hashmap_addr(S_TABLE,stackpos- cur_frame(), identifier->oper.symbol);
         break;
     }
+    case op_next: {
+        int sym = node->oper.commonExp.arg->oper.symbol;
+        char * reg = getReg(counterArr[counterInt]);
+        char x86[40];
+        x86_64_to_x86(reg,x86);
+        put("addl $1, -%d(%%rbp)", counterAddr);
+        put_notab("for_cmp%d:", sym);
+        put("mov -%d(%%rbp), %s",counterAddr, x86);
+        put("cmp -%d(%%rbp), %s",counterAddr + 4, x86);
+        put("jle for_iter%d", sym);
+        RegIsOccupied[counterArr[counterInt]] = false;
+        counterInt--;
+        break;
+    }
     case op_end:
         put("");
         end_stack_frame();
         multi_mov(REG_AX | REG_DI, "$60", "$0");
-        put("syscall");
         hasEnd = true;
+        break;
     default:
         break;
     }
@@ -372,7 +445,7 @@ static void handle_one_word_statements(AST *node) {
     }
 }
 
-static void handle_statements(AST *node) {
+static void handle_statements(AST *node) { 
     switch (node->tag)
     {
     case tag_common_statement:
@@ -384,6 +457,9 @@ static void handle_statements(AST *node) {
     case tag_if:
         handle_if_statement(node);
         break;
+    case tag_for:
+        handle_for_statement(node);
+        break;
     default:
         break;
     }
@@ -392,12 +468,12 @@ static void handle_statements(AST *node) {
 
 static void start() {
     int i= 0;
-    fprintf(tar, "_start:\n");
+    put_notab("_start:");
     new_stack_frame();
     while (statements[i]) {
     AST * node = statements[i];
     if (node->tag == tag_numline && node->oper.numline.isGotoLabel) {
-        fprintf(tar, "goto%d:", node->oper.numline.value);
+        put_notab("goto%d:", node->oper.numline.value);
         node = node->oper.numline.next;
     }
     else if (node->tag == tag_numline) node = node->oper.numline.next;
@@ -419,27 +495,44 @@ static void pop(char* str) {
 }
 
 static void call(char* str) {
+    bool pushed[REG_COUNT] = {false};
+    for (int i = 0; i < REG_COUNT; i++) {
+        if (RegIsOccupied[i]) {
+            put("push %s", getReg(i));
+            pushed[i] = true;
+        }
+    }
     put("call %s", str);
+    for (int i = REG_COUNT-1; i >= 0; i--) {
+        if (pushed[i]) put("pop %s", getReg(i));
+    }
 }
 
 static void put(char * format, ...) {
     va_list args;
-    
     va_start(args, format);
     fprintf(tar,"\t");
     vfprintf(tar,format, args);
     fprintf(tar, "\n");
     va_end(args);
 }
+static void put_notab(char * format, ...) {
+    va_list args;
+    va_start(args, format);
+    vfprintf(tar,format, args);
+    fprintf(tar, "\n");
+    va_end(args);
+}
+
 
 void make_target_src() { //my brain hurts
 
     tar = fopen(tar_path_name, "w"); 
     put(".code64");
-    fprintf(tar,".section .data\n"); 
+    put_notab(".section .data"); 
     data_section();
-    fprintf(tar,".global _start\n"); 
-    fprintf(tar, ".section .text\n");
+    put_notab(".global _start"); 
+    put_notab(".section .text");
     include("src/funcs.inc");
     start();
     fclose(tar);

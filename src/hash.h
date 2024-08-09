@@ -38,7 +38,8 @@ typedef struct ll_node {
 } LL_NODE;
 typedef struct s_table{
     LL_NODE** list;
-    int inds[S_TABLE_SIZE];   
+    int inds[S_TABLE_SIZE];
+    struct s_table * next;
 } hashmap;
 
 extern hashmap * S_TABLE;
