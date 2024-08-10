@@ -124,8 +124,6 @@ LL_NODE * MakeLLnode(char * name,AST * data) {
         l->type = type_string;
         break;
     case tag_var:
-        l->type = type_variable;
-        break;
     case tag_assign:
         l->type = type_pointer_var;
         break;
