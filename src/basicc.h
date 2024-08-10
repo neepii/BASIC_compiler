@@ -40,9 +40,15 @@
 
 #define MAX_TOKENS_IN_LINE 20
 #define TOKEN_LEN 20
+#define STACKS_SIZE 50
 
 #define MAX(a,b) (((a) > (b)) ? (a) : (b))
-#define MIN(a,b) (((a) < (b)) ? (a) : (b))
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+
+typedef struct stack {
+   
+}STACK;
+
 extern char ** tokens;
 extern unsigned int tokInd;
 extern unsigned int tokLen;

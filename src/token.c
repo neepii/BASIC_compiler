@@ -10,6 +10,7 @@ unsigned int tokInd =0;
 unsigned int tokLen = 0;
 
 void freeTokensArr() {
+    if (tokens[0] == NULL) return;
     for (int i = 0; i < MAX_TOKENS_IN_LINE; i++)
     {
         free(tokens[i]);

@@ -84,6 +84,12 @@ static void print_stmt(int stmt) {
         case op_end:
             printf("END");
             break;
+        case op_let:
+            printf("LET");
+            break;
+        case op_while:
+            printf("WHILE");
+            break;
         case op_rem:
             printf("REM");
             break;
@@ -335,7 +341,7 @@ static AST * parse_InputStatementExp() {
     return node;
 }
 static AST * parse_WhileStatementExp() {
-    return parse_CommonExp(parse_arith_expression, op_input);
+    return parse_CommonExp(parse_arith_expression, op_while);
 }
 static AST * parse_RemStatementExp() {
     return parse_OneWordStatementExp(op_rem);

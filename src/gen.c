@@ -1,23 +1,28 @@
-
 #include "basicc.h"
 FILE * tar;
 unsigned int stackpos = 0;
 AST** statements;
 char * tar_path_name;
 
+struct nAST{
+    int key;
+    AST * ast;
+};
 //stacks
 unsigned int frameArr[50] = {0};
 unsigned int frameInt = 0;
 unsigned char counterArr[50] = {0};
 unsigned char counterInt = 0;
 unsigned char counterAddr = 0;
+struct nAST whileArr[50] = {0};
+unsigned char whileInt = 0;
 
 #define REG_COUNT 16
 bool RegIsNotCleared[REG_COUNT] = {false};
 bool RegIsOccupied[REG_COUNT] = {false}; //global
 bool hasEnd = false;
 
-unsigned int while_id = 0;
+
 
 #define REG_AX  1 << 0
 #define REG_BX  1 << 1
@@ -468,7 +473,11 @@ void handle_common_statements(AST * node) {
         break;
     }
     case op_while: {
-        put_notab("while_iter%d:", while_id);        
+        static int id = 0;
+        whileArr[whileInt].key = id++;
+        whileArr[whileInt].ast = arg;
+        put("jmp while_cmp%d", whileArr[whileInt].key);
+        put_notab("while_iter%d:", whileArr[whileInt].key);
         break;
     }
     case op_end:
@@ -488,6 +497,11 @@ static void handle_one_word_statements(AST *node) {
     case op_rem:
         break;
     case op_wend:
+        put_notab("while_cmp%d:", whileArr[whileInt].key);
+        char * reg = eval_arith_exp(whileArr[whileInt].ast);
+        put("cmp $1, %s", reg);
+        put("jge while_iter%d", whileArr[whileInt].key);
+        whileInt++;
         break;
     default:
         break;

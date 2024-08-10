@@ -72,7 +72,7 @@ int main(int argc, char  *argv[])
     }
     free(statements);
     free(tar_path_name);
-    freeTokensArr();
+//    freeTokensArr();
     free_s_table();
     fclose(src);
 
