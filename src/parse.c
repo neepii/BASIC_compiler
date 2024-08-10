@@ -52,6 +52,21 @@ static void print_op(int op) {
     case op_equal:
         printf("=");
         break;
+    case op_greater:
+        printf(">");
+        break;
+    case op_less:
+        printf("<");
+        break;
+    case op_less_eq:
+        printf("<=");
+        break;
+    case op_greater_eq:
+        printf(">=");
+        break;
+    case op_not_eq:
+        printf("><");
+        break;
     default:
         break;
     }

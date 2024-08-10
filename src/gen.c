@@ -17,6 +17,8 @@ bool RegIsNotCleared[REG_COUNT] = {false};
 bool RegIsOccupied[REG_COUNT] = {false}; //global
 bool hasEnd = false;
 
+unsigned int while_id = 0;
+
 #define REG_AX  1 << 0
 #define REG_BX  1 << 1
 #define REG_CX  1 << 2
@@ -42,9 +44,11 @@ static void call(char *str);
 static void handle_statements(AST *node);
 static bool getLastChar(Atom atom, char c);
 static void handle_one_arg_op(int* regArr, Atom args[2], char * str[2], char * op);
+static void handle_cmp_op(int * regArr, Atom args[2], char* str[2], char * op);
 static char *getReg(int ind);
 static bool isOccupied(int *regArr, int reg);
-static void swap_str(char  **a, char **b);
+
+
 
 
 
@@ -199,10 +203,24 @@ static char * getReg(int ind) {
     return regs[ind];
 }
 
-static void swap_str(char **a, char **b) {
-    char * temp = *a;
-    *a = *b;
-    *b = temp;
+static void handle_cmp_op(int * regArr, Atom args[2], char* str[2], char * op) {
+    put("cmp %s, %s", str[0], str[1]);
+    if (isOccupied(regArr, 0)) {
+        int new_ind = requestReg(args[0].c, regArr);
+        char *reg = getReg(new_ind);
+        if (RegIsNotCleared[new_ind])
+            put("xor %s, %s", reg, reg);
+        RegIsNotCleared[new_ind] = true;
+        put("xchg %%rax, %s", reg);
+        put("%s %%al", op);
+        put("movzbl %%al, %%eax");
+        put("xchg %%rax, %s", reg);
+        str[1] = reg;
+    } else {
+        put("%s %%al", op);
+        put("movzbl %%al, %%eax");
+        put("mov %%rax, %s", str[1]);
+    }
 }
 
 char * put_tac(int num, TAC* tac, int *regArr) {
@@ -279,21 +297,23 @@ char * put_tac(int num, TAC* tac, int *regArr) {
         handle_one_arg_op(regArr, args, str, "div");
         break;
     case op_equal:
-	put("cmp %s, %s", str[0], str[1]);
-	if (isOccupied(regArr, 0)) {
-	    new_ind = requestReg(args[0].c, regArr);
-        char * reg = getReg(new_ind);
-	    if (RegIsNotCleared[new_ind]) put("xor %s, %s", reg,reg);
-	    RegIsNotCleared[new_ind] = true;    
-	    put("xchg %%rax, %s", reg);
-	    call("bool_equal");
-	    put("xchg %%rax, %s", reg);
-	    str[1] = reg; 
-	} else {
-	    call("bool_equal");
-	    put("mov %%rax, %s", str[1]);
-	}
-	break;
+        handle_cmp_op(regArr, args, str, "sete");
+        break;
+    case op_greater:
+        handle_cmp_op(regArr, args, str, "setng");
+        break;
+    case op_less:
+        handle_cmp_op(regArr, args, str, "setnl");
+        break;
+    case op_less_eq:
+        handle_cmp_op(regArr, args, str, "setnle");
+        break;
+    case op_greater_eq:
+        handle_cmp_op(regArr, args, str, "setnge");
+        break;
+    case op_not_eq:
+        handle_cmp_op(regArr, args, str, "setne");
+        break;
     default:
         break;
     }
@@ -445,6 +465,10 @@ void handle_common_statements(AST * node) {
         put("jle for_iter%d", sym);
         RegIsOccupied[counterArr[counterInt]] = false;
         counterInt--;
+        break;
+    }
+    case op_while: {
+        put_notab("while_iter%d:", while_id);        
         break;
     }
     case op_end:
