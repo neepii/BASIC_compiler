@@ -4,6 +4,7 @@
 
 int exit_code = 0;
 int ParenthesisLvl = 0;
+static void map_tac(TAC *tac, void* (*f)(void *));
 static AST * parse_OneWordStatementExp(int stmt);
 static AST * parse_CommonExp(AST* (*f)(void),int stmt);
 static AST * parse_IfStatementExp();
@@ -222,11 +223,22 @@ void map_ast(AST * ast, void* (*f)(void*)) {
     case tag_unary:
         map_ast(ast->oper.unaryExp.operand,f);
         break;
+    case tag_arith:
+        map_ast(ast->oper.arithExp.highlvl,f);
+        map_tac(ast->oper.arithExp.lowlvl,f);
+        break;
     default:
         break;
     }   
     f(ast);
 }
+
+static void map_tac(TAC *tac, void* (*f)(void *)) {
+    f(tac->arr);
+    f(tac);
+}
+
+
 void printParsedLine(AST * tree) {
     printAST(tree);
     printf("\n");
@@ -291,7 +303,7 @@ static AST * parse_PrintStatementExp() {
         add_symbol(node->oper.commonExp.arg);
     } else if (isVAR(str)) {
         node->oper.commonExp.arg = AllocNode();
-        node->oper.commonExp.arg->oper.symbol = getId(str,S_TABLE);
+        node->oper.commonExp.arg->oper.symbol = getId(str, S_TABLE);
         node->oper.commonExp.arg->tag = tag_symbol;
     } else if (isINT(str)) {
         node->oper.commonExp.arg = parse_arith_expression();

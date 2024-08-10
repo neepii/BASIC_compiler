@@ -42,7 +42,9 @@ static void call(char *str);
 static void handle_statements(AST *node);
 static bool getLastChar(Atom atom, char c);
 static void handle_one_arg_op(int* regArr, Atom args[2], char * str[2], char * op);
-static char * getReg(int ind);
+static char *getReg(int ind);
+static bool isOccupied(int *regArr, int reg);
+static void swap_str(char  **a, char **b);
 
 
 
@@ -107,6 +109,10 @@ unsigned int cur_frame() {
     return frameArr[frameInt];
 }
 
+/*
+  if RegArr is NULL
+  it will occupy globally
+ */
 static int OccupyReg(int ind, int* regArr) {
     int i;
     if (regArr == NULL) { //global
@@ -120,13 +126,20 @@ static int OccupyReg(int ind, int* regArr) {
     } else {
         for (i = 0; i < REG_COUNT; i++) {
             if (i == 6 || i ==7) continue; 
-            if (regArr[i] == -1 && !RegIsOccupied[i]) {
+            if (!isOccupied(regArr, i)) {
                 regArr[i] = ind;
                 return i;
             }
         }
     }
     return -1;
+}
+/*
+  if regArr is NULL -> ask only global
+*/
+static bool isOccupied(int *regArr, int reg) {
+    if (regArr == NULL) return RegIsOccupied[reg];
+    return (regArr[reg] != -1 || RegIsOccupied[reg]);
 }
 
 static int requestReg(char * tempVar, int * regArr) {
@@ -136,30 +149,36 @@ static int requestReg(char * tempVar, int * regArr) {
 }
 
 static void handle_one_arg_op(int* regArr, Atom args[2], char * str[2], char * op) {
+    put("");
     bool pop_b = false;
     int temporary = requestReg(str[1], regArr);
-    if (regArr[0] != -1 && !match(str[1], "%rax")) {
-        put("xchg %%rax, %s",getReg(temporary));
+    char * reg = getReg(temporary);
+    
+    if (isOccupied(regArr, 0) && !match(str[1], "%rax")) {
+        assert(0);
+        // put("xchg %%rax, %s",reg);    
 
-        if (regArr[3] != -1) {
+        // if (isOccupied(regArr,3)) { //rdx
+        //     push("%rdx");
+        //     pop_b = true;
+        // }
+
+        // put("mov %s, %%rax", str[0]);
+        // put("%s %s",op, str[1]);
+        // if (pop_b)  pop("%rdx");
+        // put("mov %%rax, %s", str[1]);
+
+        // put("mov %s, %%rax", getReg(temporary));
+    } else {
+        assert(isOccupied(regArr, 0));
+        
+        if (isOccupied(regArr,3)) { //rdx
             push("%rdx");
             pop_b = true;
         }
-
-        put("mov %s, %%rax", str[0]);
-        put("%s %s",op, str[1]);
-        if (pop_b)  pop("%rdx");
-        put("mov %%rax, %s", str[1]);
-
-        put("mov %s, %%rax", getReg(temporary));
-    } else {
-        assert(regArr[0] != -1);
-        
-        if (regArr[3] != -1) { //rdx is occupied
-            push("%rdx");
-        }
-        put("mov %s, %s", str[0], getReg(temporary));
-        put("%s %s",op, getReg(temporary));
+        put("mov %s, %s", str[0], reg);
+        put("xchg %%rax, %s",reg);
+        put("%s %s",op, reg);
 
         if (!match(str[1], "%rax")) put("mov %%rax, %s", str[1]);
         if (pop_b) pop("%rdx");
@@ -178,6 +197,12 @@ static char * getReg(int ind) {
         "%r12", "%r13", "%r14", "%r15"
     };
     return regs[ind];
+}
+
+static void swap_str(char **a, char **b) {
+    char * temp = *a;
+    *a = *b;
+    *b = temp;
 }
 
 char * put_tac(int num, TAC* tac, int *regArr) {
@@ -255,7 +280,7 @@ char * put_tac(int num, TAC* tac, int *regArr) {
         break;
     case op_equal:
 	put("cmp %s, %s", str[0], str[1]);
-	if (regArr[0] != -1) {
+	if (isOccupied(regArr, 0)) {
 	    new_ind = requestReg(args[0].c, regArr);
         char * reg = getReg(new_ind);
 	    if (RegIsNotCleared[new_ind]) put("xor %s, %s", reg,reg);

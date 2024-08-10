@@ -108,10 +108,7 @@ bool isBINEXP(char * str) {
 
 
 bool match(char * str1, const char* str2) {
-    if (strcmp(str1, str2) == 0) {
-        return true;
-    }
-    return false;
+    return (strcmp(str1, str2) == 0);
 }
 char * next_token() {
     return tokens[tokInd+1];

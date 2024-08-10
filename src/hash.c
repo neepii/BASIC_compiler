@@ -26,7 +26,6 @@ hashmap * create_table() {
 
 void free_s_table() {
     int i = 0, ind= S_TABLE->inds[0];
-    quicksort(S_TABLE->inds, 0, S_TABLE_SIZE-1);
     int last= 0;
     while(ind != -1) {
         if (last != ind) FreeLLIST_all(&S_TABLE->list[ind]);
@@ -51,8 +50,8 @@ void insert_hashmap_addr(hashmap * table, int data, int id) {
 
 int getId(char * str, hashmap * table) {
     int ind = (int) hash(str) % S_TABLE_SIZE;
-    LL_NODE ** p = &S_TABLE->list[ind];
-    while((*p) != NULL) {
+    LL_NODE ** p = (table->list[ind]) ? &table->list[ind] : NULL;
+    while(p != NULL) {
         if (match(str, (*p)->name)) return (*p)->id;
         p = &(*p)->next;
     }
