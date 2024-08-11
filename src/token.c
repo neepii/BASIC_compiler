@@ -148,26 +148,29 @@ int LineToTokens(FILE * in) {
     }
 
     while(cur_char && type != WT_ETC) {
-        cur_char = (char)toupper(cur_char);
+        if (!inQuotes) cur_char = (char)toupper(cur_char);
 
-        if (cur_char == ' ') {
-            type = (inQuotes) ? WT_QUOTES : WT_SPACE;
+        if (isQUOTE(cur_char)) {
+            type = WT_QUOTES;
+            inQuotes = !inQuotes;
+        }
+        else if (inQuotes) {
+            type = WT_QUOTES;
+        }
+        else if (cur_char == ' ') {
+            type = WT_SPACE;
         }
         else if (cur_char == '\n') {
             type = WT_NEWLINE;
         }
         else if (isCHAR(cur_char)) {
-            type = (inQuotes) ? WT_QUOTES : WT_CHAR;
+            type = WT_CHAR;
         }
         else if (isOPER(cur_char)) {
             type = WT_OPER;
         } 
         else if (isNUM(cur_char)) {
             type = WT_NUM;
-        }
-        else if (isQUOTE(cur_char)) {
-            type = WT_QUOTES;
-            inQuotes = !inQuotes;
         }
         else if (isPARENTHESIS(cur_char)) {
             type = WT_PARENTHESIS;
