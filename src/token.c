@@ -29,7 +29,7 @@ void test_regex(char * str) {
 }
 
 void init_nfa() {
-    nfaINTEGER = createNFA("(+|-|.)[0-9]*");
+    nfaINTEGER = createNFA("(+|-)?[0-9][0-9]*");
     nfaSTRING = createNFA("\"(.)*\"");
 }
 
@@ -162,7 +162,10 @@ static NFA * createNFA(char * re) {
             add_edge_graph(G,lp, i+1);
             add_edge_graph(G,i+1, lp);
         }
-        if (re[i] == '(' || re[i] == '*' || re[i] == ')') {
+        else if (i < M - 1 && re[i+1] == '?') {
+            add_edge_graph(G, lp, i+1);
+        }
+        if (re[i] == '(' || re[i] == '*' || re[i] == ')' || re[i] == ']' || re[i] == '?') {
             add_edge_graph(G, i, i+1);
         }
     }
