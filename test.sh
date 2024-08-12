@@ -22,7 +22,7 @@ echo 45
 test "
 10 PRINT \"HI\"\n
 20 END
-n"
+"
 echo "HI"
 
 test "

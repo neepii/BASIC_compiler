@@ -20,22 +20,22 @@ static void free_graph(GRAPH *g);
 static void print_graph(GRAPH *g);
 static bool recognizes_nfa(NFA *nfa, char *str);
 
-NFA *isINTEGER;
-NFA *isSTR;
+NFA *nfaINTEGER;
+NFA *nfaSTRING;
 
 void test_regex(char * str) {
-    printf("Argument is integer: %s\n", (recognizes_nfa(isINTEGER, str)) ? "True" : "False");
-    printf("Argument is string: %s\n", (recognizes_nfa(isSTR, str)) ? "True" : "False");
+    printf("Argument is integer: %s\n", (recognizes_nfa(nfaINTEGER, str)) ? "True" : "False");
+    printf("Argument is string: %s\n", (recognizes_nfa(nfaSTRING, str)) ? "True" : "False");
 }
 
 void init_nfa() {
-    isINTEGER = createNFA("(+|-)(0|1|2)*");
-    isSTR = createNFA("\"(.)*\"");
+    nfaINTEGER = createNFA("(+|-|.)[0-9]*");
+    nfaSTRING = createNFA("\"(.)*\"");
 }
 
 void free_nfa() {
-    clear_nfa(isINTEGER);
-    clear_nfa(isSTR);
+    clear_nfa(nfaINTEGER);
+    clear_nfa(nfaSTRING);
 }
 
 static STACK *init_stack(int len) {
@@ -216,8 +216,15 @@ static bool recognizes_nfa(NFA *nfa, char *str) {
     for (int i = 0; i < len; i++) { 
         for (int j = 0; j < pc->last; j++) { //
             int v = pc->arr[j];
-            if ((v < nfa->M) && (nfa->re[v] == str[i] || nfa->re[v] == '.'))
-                push(aux, v+1);
+            if (v < nfa->M) {
+                
+                if (nfa->re[v] == '[') {
+                    assert(nfa->re[v+2] == '-');
+                    if (str[i] >= nfa->re[v+1] && str[i] <= nfa->re[v+3]) push(aux, v+4);
+                }
+                else if (nfa->re[v] == str[i] || nfa->re[v] == '.') push(aux, v+1);
+                
+            }
         }
         
         clear_stack(pc);
@@ -289,7 +296,7 @@ static bool isCHAR(char c) {
 }
 
 bool isSTRING(char * str) {
-    return recognizes_nfa(isSTR, str);
+    return recognizes_nfa(nfaSTRING, str);
 }
 
 bool isUNARY(char * str) {
@@ -311,7 +318,7 @@ bool isVAR(char * str) {
 }
 
 bool isINT(char * str) {
-    return isNUM(str[0]);
+    return recognizes_nfa(nfaINTEGER,str);
 }
 
 bool isBINEXP(char * str) {
