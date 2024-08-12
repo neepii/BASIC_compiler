@@ -29,7 +29,7 @@ void test_regex(char * str) {
 }
 
 void init_nfa() {
-    isINTEGER = createNFA("(+|-)(0|1|2)*");
+    isINTEGER = createNFA("(+|-|.)(0|1|2|3)*");
     isSTR = createNFA("\"(.)*\"");
 }
 
@@ -49,6 +49,9 @@ static STACK *init_stack(int len) {
 }
 
 static void clear_stack(STACK *s) { s->last = 0; }
+static int top_stack(STACK *s) { return s->arr[s->last - 1]; }
+static bool stack_is_empty(STACK *s) { return s->last == 0; }
+
 
 static char *stack_to_str(STACK *s) { //pretty printing
     static char str[50];
@@ -76,6 +79,7 @@ static int pop(STACK *st) {
     }
     return st->arr[--st->last];
 }
+
 static void print_graph(GRAPH *g) {
     for (int i = 0; i < g->v; i++) {
         for (int j = 0; j < g->adj[i]->arrlen; j++) {
@@ -135,18 +139,31 @@ static NFA * createNFA(char * re) {
     char * regex = (char *) malloc(sizeof(char) * M);
     strncpy(regex, re, M);
     GRAPH * G = init_graph(M+1);
-    STACK * ops = init_stack(0);
+    
+    STACK * ors = init_stack(10);
+    STACK * ops = init_stack(10);
+    
     for (int i = 0 ; i < M; i++) {
         int lp = i;
         if (re[i] == '(' || re[i] == '|') {
             push(ops, i);
         }
         else if(re[i] == ')') {
-            int or = pop(ops);
-            if (re[or] == '|') {
+            int or = top_stack(ops);
+            bool OrPresence = false;
+            while (re[or] == '|') {
+                push(ors, pop(ops));     
+                or = top_stack(ops);     
+                OrPresence = true;
+            }
+            if (OrPresence) {
                 lp = pop(ops);
-                add_edge_graph(G, lp, or+1);
-                add_edge_graph(G, or, i);
+                assert(re[lp] == '(');
+                do {
+                    or = pop(ors);
+                    add_edge_graph(G, lp, or +1);
+                    add_edge_graph(G, or, i);
+                } while (!stack_is_empty(ors));
             }
             else lp = or;
         }
@@ -154,11 +171,14 @@ static NFA * createNFA(char * re) {
             add_edge_graph(G,lp, i+1);
             add_edge_graph(G,i+1, lp);
         }
+//        if (i < M - 1 && re[i + 1] == '+') {  // closure '+'
+//        }
         if (re[i] == '(' || re[i] == '*' || re[i] == ')') {
             add_edge_graph(G, i, i+1);
         }
     }
     free(ops);
+    free(ors);
     nfa->g = G;
     nfa->M = M;
     nfa->re = regex;
