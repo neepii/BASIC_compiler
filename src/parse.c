@@ -616,7 +616,7 @@ int p_atoi(char *str, int count) {
 static bool getLastChar(Atom atom, char c) {
     if (atom.i == 0) return false;
     int len = strlen(atom.c);
-    return ((atom.c[len-1] == c) && (isINT(atom.c))); // [0-9]t is reserved for temp vars in TAC
+    return ((atom.c[len-1] == c) && (isNUM(atom.c[0]))); // [0-9]t is reserved for temp vars in TAC
 }
 bool isSymbolVar(Atom atom) {
     return getLastChar(atom, 's');

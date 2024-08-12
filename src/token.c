@@ -29,8 +29,7 @@ void test_regex(char * str) {
 }
 
 void init_nfa() {
-    nfaINTEGER = createNFA("(+|-)?[0-9]*");
-    print_graph(nfaINTEGER->g);
+    nfaINTEGER = createNFA("(+|-|.)[0-9]*");
     nfaSTRING = createNFA("\"(.)*\"");
 }
 
@@ -158,18 +157,12 @@ static NFA * createNFA(char * re) {
         else if (re[i] == ']') {
             lp = pop(ops);
             assert(re[lp] == '[');
-            add_edge_graph(G, lp, i);
         }
         if (i < M - 1 && re[i+1] == '*') {
             add_edge_graph(G,lp, i+1);
             add_edge_graph(G,i+1, lp);
         }
-        else if (i < M - 1 && re[i+1] == '?') {
-            add_edge_graph(G, lp, i+1);
-        }
-//      if (i < M - 1 && re[i + 1] == '+') {  // closure '+'
-//      }
-        if (re[i] == '(' || re[i] == '*' || re[i] == ')' || re[i] == ']' || re[i] == '?') {
+        if (re[i] == '(' || re[i] == '*' || re[i] == ')') {
             add_edge_graph(G, i, i+1);
         }
     }
@@ -293,7 +286,7 @@ static bool isOPER(char c) {
     return (c >= 0x2A && c <= 0x2D) || c == 0x2F || (c >= 0x3C && c <= 0x3E);
 }
 
-static bool isNUM(char c) {
+bool isNUM(char c) {
     return c >= 0x30 && c <= 0x39;
 }
 
