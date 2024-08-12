@@ -29,7 +29,7 @@ void test_regex(char * str) {
 }
 
 void init_nfa() {
-    isINTEGER = createNFA("(+|-|.)(0|1|2|3)*");
+    isINTEGER = createNFA("(+|-)(0|1|2)*");
     isSTR = createNFA("\"(.)*\"");
 }
 
@@ -139,46 +139,35 @@ static NFA * createNFA(char * re) {
     char * regex = (char *) malloc(sizeof(char) * M);
     strncpy(regex, re, M);
     GRAPH * G = init_graph(M+1);
-    
-    STACK * ors = init_stack(10);
-    STACK * ops = init_stack(10);
-    
+    STACK * ops = init_stack(0);
     for (int i = 0 ; i < M; i++) {
         int lp = i;
-        if (re[i] == '(' || re[i] == '|') {
+        if (re[i] == '(' || re[i] == '|' || re[i] == '[') {
             push(ops, i);
         }
         else if(re[i] == ')') {
-            int or = top_stack(ops);
-            bool OrPresence = false;
-            while (re[or] == '|') {
-                push(ors, pop(ops));     
-                or = top_stack(ops);     
-                OrPresence = true;
-            }
-            if (OrPresence) {
+            int or = pop(ops);
+            if (re[or] == '|') {
                 lp = pop(ops);
-                assert(re[lp] == '(');
-                do {
-                    or = pop(ors);
-                    add_edge_graph(G, lp, or +1);
-                    add_edge_graph(G, or, i);
-                } while (!stack_is_empty(ors));
+                add_edge_graph(G, lp, or+1);
+                add_edge_graph(G, or, i);
             }
             else lp = or;
+        }
+        else if (re[i] == ']') {
+            lp = pop(ops);
+            assert(re[lp] == '[');
+            add_edge_graph(G, lp, i);
         }
         if (i < M - 1 && re[i+1] == '*') { // find order of eval logic exps
             add_edge_graph(G,lp, i+1);
             add_edge_graph(G,i+1, lp);
         }
-//        if (i < M - 1 && re[i + 1] == '+') {  // closure '+'
-//        }
         if (re[i] == '(' || re[i] == '*' || re[i] == ')') {
             add_edge_graph(G, i, i+1);
         }
     }
     free(ops);
-    free(ors);
     nfa->g = G;
     nfa->M = M;
     nfa->re = regex;
