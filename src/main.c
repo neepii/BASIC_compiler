@@ -11,6 +11,7 @@ int main(int argc, char  *argv[])
     char source_name[50] = {0};
     tar_path_name = (char *) malloc(sizeof(char) * 50);
     strcpy(tar_path_name,"/tmp/XXX08080.s");
+    init_nfa();
     if (argc == 1) {
         printf("No arguments\n");
         exit(1);
@@ -19,6 +20,11 @@ int main(int argc, char  *argv[])
     {
         if (match(argv[i], "--test-hash")) {
             test_hashes_on_keywords();
+            return 0;
+        }
+        else if(match(argv[i], "--test-regex") && (i + 1 <= argc)) {
+            test_regex(argv[i+1]);
+            free_nfa();
             return 0;
         }
         else if (match(argv[i], "-o") && argv[i+1]) {
@@ -74,6 +80,7 @@ int main(int argc, char  *argv[])
     free(tar_path_name);
 //    freeTokensArr();
     free_s_table();
+    free_nfa();
     fclose(src);
 
     return 0;

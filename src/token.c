@@ -4,10 +4,234 @@
 #define T_EXIT_SUCCESS 1
 #define T_EXIT_EOF 0
 #define T_EXIT_BLANK 2
+#define GRAPH_UNIT_SIZE 50
+#define DEFAULT_STACK_SIZE 50
+
 char** tokens = NULL;
 
 unsigned int tokInd =0;
 unsigned int tokLen = 0;
+bool *marked;
+unsigned int markedLen;
+
+static void clear_nfa(NFA *nfa);
+static NFA *createNFA(char *re);
+static void free_graph(GRAPH *g);
+static void print_graph(GRAPH *g);
+static bool recognizes_nfa(NFA *nfa, char *str);
+
+NFA *isINTEGER;
+NFA *isSTR;
+
+void test_regex(char * str) {
+    printf("Argument is integer: %s\n", (recognizes_nfa(isINTEGER, str)) ? "True" : "False");
+    printf("Argument is string: %s\n", (recognizes_nfa(isSTR, str)) ? "True" : "False");
+}
+
+void init_nfa() {
+    isINTEGER = createNFA("(+|-)(0|1|2)*");
+    isSTR = createNFA("\"(.)*\"");
+}
+
+void free_nfa() {
+    clear_nfa(isINTEGER);
+    clear_nfa(isSTR);
+}
+
+static STACK *init_stack(int len) {
+    STACK * stack;
+    int arrlen = (len == 0) ? DEFAULT_STACK_SIZE : len;
+    stack = (STACK*) malloc(sizeof(STACK) + sizeof(int) * (arrlen - 1));
+    stack->last = 0;
+    stack->arrlen = arrlen;
+    assert(stack->arrlen);
+    return stack;
+}
+
+static void clear_stack(STACK *s) { s->last = 0; }
+
+static char *stack_to_str(STACK *s) { //pretty printing
+    static char str[50];
+    int last = 0;
+    for (int i = 0; i < s->last; i++) {
+        str[last++] = s->arr[i];
+        str[last++] = ' ';
+    }
+    str[last] = 0;
+    return str;
+}
+
+static void push(STACK *st, int data) {
+    if (st->last > st->arrlen) {
+        st->arrlen *= 2;
+        st = realloc(st, sizeof(STACK) + sizeof(int) * (st->arrlen - 1));
+    }
+    st->arr[st->last++] = data;
+}
+
+static int pop(STACK *st) {
+    if (st->arrlen / st->last == 3) {
+        st->arrlen /= 2;
+        st = realloc(st, sizeof(STACK) + sizeof(int) * (st->arrlen - 1));
+    }
+    return st->arr[--st->last];
+}
+static void print_graph(GRAPH *g) {
+    for (int i = 0; i < g->v; i++) {
+        for (int j = 0; j < g->adj[i]->arrlen; j++) {
+            printf("%d ", g->adj[i]->arr[j]);
+        }
+        printf("\n");
+    }
+}
+static void print_stack(STACK *s) {
+    for (int i = 0; i < s->last; i++)
+        printf("%d ", s->arr[i]);
+    printf("\n");
+}
+
+
+static GRAPH *  init_graph(int num) {
+    GRAPH * g = (GRAPH*) malloc(sizeof(GRAPH) + sizeof(struct successors*) * (num -1) );
+    g->v = num;
+    g->e = 0;
+    assert(g);
+    for (int i  = 0; i < num; i++) {
+        g->adj[i] = (struct successors*) malloc(sizeof(struct successors));
+        g->adj[i]->n = 0;
+        g->adj[i]->arrlen = 1;
+     }
+    return g;
+}
+
+static void free_graph(GRAPH *g) {
+    for (int i  = 0; i < g->v; i++) free(g->adj[i]);
+    free(g);
+}
+
+static void add_edge_graph(GRAPH *g, int a , int b) {
+    assert(a >= 0);
+    assert(a < g->v);
+    assert(b >= 0);
+    assert(b < g->v);
+    while(g->adj[a]->n >= g->adj[a]->arrlen) { //cool, it will be dynamic
+        g->adj[a]->arrlen *= 2;
+        g->adj[a] = realloc(g->adj[a], sizeof(struct successors) + sizeof(int) * (g->adj[a]->arrlen - 1));
+    }
+
+    g->adj[a]->arr[g->adj[a]->n++] = b;
+    g->e++;
+}
+
+static void clear_nfa(NFA *nfa) {
+    free_graph(nfa->g);
+    free(nfa->re);
+    free(nfa);
+}
+
+static NFA * createNFA(char * re) {
+    NFA * nfa = (NFA*) malloc(sizeof(NFA));
+    int M = strlen(re);
+    char * regex = (char *) malloc(sizeof(char) * M);
+    strncpy(regex, re, M);
+    GRAPH * G = init_graph(M+1);
+    STACK * ops = init_stack(0);
+    for (int i = 0 ; i < M; i++) {
+        int lp = i;
+        if (re[i] == '(' || re[i] == '|') {
+            push(ops, i);
+        }
+        else if(re[i] == ')') {
+            int or = pop(ops);
+            if (re[or] == '|') {
+                lp = pop(ops);
+                add_edge_graph(G, lp, or+1);
+                add_edge_graph(G, or, i);
+            }
+            else lp = or;
+        }
+        if (i < M - 1 && re[i+1] == '*') { // find order of eval logic exps
+            add_edge_graph(G,lp, i+1);
+            add_edge_graph(G,i+1, lp);
+        }
+        if (re[i] == '(' || re[i] == '*' || re[i] == ')') {
+            add_edge_graph(G, i, i+1);
+        }
+    }
+    free(ops);
+    nfa->g = G;
+    nfa->M = M;
+    nfa->re = regex;
+    return nfa;
+}
+
+static STACK* DEPTH_FIRST(GRAPH * g, int v) {
+    STACK* s = init_stack(0);
+    STACK* eps = init_stack(10);
+    if (marked) {
+        for (int i = 0; i < markedLen; i++) marked[i] = false;
+        if (g->v > markedLen) marked = realloc(marked, sizeof(bool) * g->v);
+        markedLen = g->v;
+    } else {
+        marked = (bool*) malloc(sizeof(bool) * g->v);
+        markedLen = g->v;
+    }
+    
+    push(s, v);
+    while (s->last) {
+        int t = pop(s);
+        
+        if (!marked[t]) {
+            push(eps, t);
+            marked[t] = true;
+        }
+        for (int i = 0; i < g->adj[t]->n; i++) {
+            int adj_v = g->adj[t]->arr[i];
+            if (!marked[adj_v]) {
+                push(s, adj_v);
+            }
+        }
+    }
+    free(s);
+    return eps;
+}
+static bool recognizes_nfa(NFA *nfa, char *str) {
+    STACK* dfs = DEPTH_FIRST(nfa->g, 0);
+    STACK * pc = init_stack(10);
+    STACK* aux = init_stack(10);
+    int len = strlen(str);
+    
+    for (int v = 0; v < nfa->g->v; v++) 
+        if (marked[v]) push(pc, v);
+    
+    for (int i = 0; i < len; i++) { 
+        for (int j = 0; j < pc->last; j++) { //
+            int v = pc->arr[j];
+            if ((v < nfa->M) && (nfa->re[v] == str[i] || nfa->re[v] == '.'))
+                push(aux, v+1);
+        }
+        
+        clear_stack(pc);
+        clear_stack(dfs);
+
+        for (int j = 0; j < aux->last; j++) {
+            dfs = DEPTH_FIRST(nfa->g, aux->arr[j]);
+            for (int v = 0; v < nfa->g->v;v++)
+                if (marked[v]) push(pc, v);
+        }
+        clear_stack(aux);
+    }
+    free(aux);
+    free(dfs);
+    for (int j = 0; j < pc->last; j++) {
+        if (pc->arr[j] == nfa->M) {
+            free(pc);
+            return true;
+        }
+    }
+    free(pc);
+    return false;
+}
 
 void freeTokensArr() {
     if (tokens[0] == NULL) return;
@@ -51,15 +275,12 @@ static bool isNUM(char c) {
     return c >= 0x30 && c <= 0x39;
 }
 
-
 static bool isCHAR(char c) {
     return (c >=0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A);
 }
 
-
-
 bool isSTRING(char * str) {
-    return (str[0] == '"') || (str[0] == '`');
+    return recognizes_nfa(isSTR, str);
 }
 
 bool isUNARY(char * str) {

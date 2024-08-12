@@ -45,10 +45,6 @@
 #define MAX(a,b) (((a) > (b)) ? (a) : (b))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
-typedef struct stack {
-   
-}STACK;
-
 extern char ** tokens;
 extern unsigned int tokInd;
 extern unsigned int tokLen;

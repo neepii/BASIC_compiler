@@ -2,16 +2,44 @@
 #define TOKEN_H_
 
 typedef enum wordtype {
-    WT_CHAR,
-    WT_OPER,
-    WT_NUM,
-    WT_ETC,
-    WT_QUOTES,
-    WT_SPACE,
-    WT_NEWLINE,
-    WT_PARENTHESIS, //left and right are needede
-    WT_NULL
+  WT_CHAR,
+  WT_OPER,
+  WT_NUM,
+  WT_ETC,
+  WT_QUOTES,
+  WT_SPACE,
+  WT_NEWLINE,
+  WT_PARENTHESIS, // left and right are needede
+  WT_NULL
 } wt;
+
+typedef struct graph {
+    unsigned int v;
+    unsigned int e;
+    struct successors {
+        int n;
+        int arrlen;
+        int arr[1];
+    } * adj[1];
+} GRAPH;
+
+struct node {
+    int data;
+    struct node * next;
+};
+    
+typedef struct stack {
+    int last; //available
+    int arrlen;
+    int arr[1];
+} STACK;
+
+typedef struct nfa {
+    GRAPH * g;
+    int M;
+    char* re;
+} NFA;
+
 
 int LineToTokens(FILE * in);
 void TokensToLinePrint();
@@ -25,7 +53,12 @@ bool isSTRING(char * str);
 bool isUNARY(char * str);
 bool isVAR(char * str);
 bool isINT(char * str);
-bool isBINEXP(char * str);
+bool isBINEXP(char *str);
+void init_nfa();
+void free_nfa();
+void test_regex(char *str);
 
+extern NFA *nfaINTEGER;
+extern NFA *nfaSTRING;
 
 #endif
