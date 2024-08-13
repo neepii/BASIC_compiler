@@ -1,3 +1,4 @@
+
 #include "basicc.h"
 
 
@@ -326,7 +327,7 @@ static AST * parse_PrintStatementExp() {
         node->oper.commonExp.arg = AllocNode();
         node->oper.commonExp.arg->oper.symbol = getId(str, S_TABLE);
         node->oper.commonExp.arg->tag = tag_symbol;
-    } else if (isINT(str)) {
+    } else if (isINT(str) || isUNARY(str)) {
         node->oper.commonExp.arg = parse_arith_expression();
     }
     
@@ -523,6 +524,7 @@ static AST * parse_leaf() {
     if (isINT(token)) return parse_IntExp();
     if (isSTRING(token)) return parse_StrExp();
     if (isVAR(token)) return parse_VarExp();
+
     
 
     parse_error("input not found for parsing lead");
@@ -638,7 +640,7 @@ static void FillLiveArr(TAC * tac) {
         if (isTempVar(tac->arr[i].result)) {
             tempind = postfix_GetIndex(tac->arr[i].result.c);                                   // index
             if (tac->LiveInterval[tempind][0] == -1) tac->LiveInterval[tempind][0] = i;     // update start interval if it has default value
-            tac->LiveInterval[tempind][1] = i;                                              // update end interval
+            tac->LiveInterval[tempind][1] = i;                                              // update end interval //also wtf is this triple bs
         }
         if (isTempVar(tac->arr[i].arg1)) {
             tempind = postfix_GetIndex(tac->arr[i].arg1.c); 
@@ -669,27 +671,22 @@ static AST * parse_arith_expression() {
 }
 
 static char * FillTac(AST * ast, TAC * tac, int * ind) {
-    char * left = NULL;
-    char * right = NULL;
-    if (ast->oper.binaryExp.left->tag == tag_binary) left = FillTac(ast->oper.binaryExp.left, tac, ind);
-    if (ast->oper.binaryExp.right->tag == tag_binary) right = FillTac(ast->oper.binaryExp.right, tac, ind);
+    char * temp[2] = {NULL, NULL};
+    AST * asts[2] = {ast->oper.binaryExp.left, ast->oper.binaryExp.right};
+    Atom args[2], res;
 
-
-    Atom arg1, arg2, res;
-    if (left) strcpy(arg1.c, left);
-    else if (ast->oper.binaryExp.left->tag == tag_symbol) 
-        sprintf(arg1.c, "%ds", ast->oper.binaryExp.left->oper.symbol); // s for symbol
-    else arg1.i = ast->oper.binaryExp.left->oper.intExp;
-    
-    if (right) strcpy(arg2.c, right);
-    else if (ast->oper.binaryExp.right->tag == tag_symbol) 
-        sprintf(arg2.c, "%ds", ast->oper.binaryExp.right->oper.symbol);
-    else arg2.i = ast->oper.binaryExp.right->oper.intExp;
-
+    for (int i = 0; i < 2; i++) {
+        if (asts[i]->tag == tag_binary) temp[i] = FillTac(asts[i], tac, ind);
+      
+        if (temp[i]) strcpy(args[i].c, temp[i]);
+        else if (asts[i]->tag == tag_symbol) 
+            sprintf(args[i].c, "%ds", asts[i]->oper.symbol); // s for symbol     
+        else args[i].i = asts[i]->oper.intExp;
+    }
     sprintf(res.c, "%dt", *ind); // t for temp
     tac->arr[*ind].operator = ast->oper.binaryExp.operator;
-    tac->arr[*ind].arg1.i = arg1.i;
-    tac->arr[*ind].arg2.i = arg2.i;
+    tac->arr[*ind].arg1.i = args[0].i;
+    tac->arr[*ind].arg2.i = args[1].i;
     strcpy(tac->arr[*ind].result.c, res.c);
     return tac->arr[(*ind)++].result.c;
 }
@@ -711,9 +708,14 @@ TAC * ASTtoTAC(AST * node) {
             char temp[10];
             sprintf(temp, "%ds", node->oper.symbol);
             strcpy(arr->arg2.c, temp);
-        } else {
+        }
+        else if (node->tag == tag_unary && node->oper.unaryExp.operator == op_minus) {
+            arr->arg2.i = UINT_MAX - node->oper.unaryExp.operand->oper.intExp;
+        }
+        else {
             arr->arg2.i = node->oper.intExp;
         }
+        assert(arr->arg2.i);
         arr->arg1.i = 0;
         arr->result.i = 0;
         tac->arr = arr;

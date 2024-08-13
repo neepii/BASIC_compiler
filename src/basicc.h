@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <unistd.h>
+#include <limits.h>
 #include "parse.h"
 #include "hash.h"
 #include "token.h"

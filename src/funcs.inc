@@ -1,15 +1,21 @@
 # rdi - string buffer
-# uses rax rsi
+# uses rax rsi r10
 atoi:
 
 	xor %rax, %rax
+    xor %r10, %r10
+	movzx (%rdi), %rsi
+    cmp $45, %rsi
+    jne atoi_convert
+    mov $1, %r10
+    inc %rdi
 atoi_convert:
 	movzx (%rdi), %rsi
 	test %rsi, %rsi
-	jz atoi_end
+	jz atoi_check_sign
 
 	cmp $10, %rsi
-	je atoi_end
+	je atoi_check_sign
 
 	cmp $48, %rsi
 	jl atoi_error
@@ -25,7 +31,11 @@ atoi_convert:
 	jmp atoi_convert
 atoi_error:
 	mov $-1, %rax
-atoi_end:
+atoi_check_sign:
+    cmp $1, %r10
+    jne atoi_ret
+    xor $0xffffffff, %eax
+atoi_ret:
 	ret
 	
 
@@ -59,11 +69,13 @@ strlen_end:
 
 #;rax - buffer
 #;rdi - dword (a integer to convert)
-#uses rsi rdi r8 r9 rcx rdx
+#uses rsi rdi r8 r9 rcx rdx r10
 uitoa:
+
 	movq %rax, %rsi
 
 	movl %edi, %eax
+
 	cmp $0, %rax
  	jnz uitoa_convert_reg
 	movb $48, (%rsi)
@@ -73,9 +85,16 @@ uitoa:
 	jmp uitoa_end
 	
 uitoa_convert_reg:
-	mov $10, %r9
+    xor %rcx, %rcx
+    xor %r10, %r10
+    mov $10, %r9
+    
+    cmp $0x7fffffff, %rax
+    jle uitoa_loop
+    xor $0xffffffff, %edi
+    mov %edi, %eax
+    mov $1, %r10
 
-	xor %rcx, %rcx
 uitoa_loop:
 	xor %rdx, %rdx
 	div %r9
@@ -98,7 +117,10 @@ uitoa_convert:
 	add $48, %rdx
 	movb %dl,(%rsi)
 	loopnz uitoa_convert
-
 	mov %r8, %rax
+    cmp $0, %r10
+    je uitoa_end
+    dec %rsi
+    movb $45, (%rsi) 
 uitoa_end:
 	ret

@@ -63,6 +63,7 @@ static void data_section() {
     put(".lcomm digitspace, 16");
     put(".lcomm bytestorage, 1");
     put(".lcomm stringspace, 32");
+    put_notab("int_max: .quad 2147483647");
     for (int i = 0; i < S_TABLE_SIZE; i++)
     {
         if (S_TABLE->inds[i] == -1) break;   
@@ -364,7 +365,7 @@ static void handle_for_statement(AST * node) {
         x86_64_to_x86(values[i],x86[i]);
         stackpos += 4;
         address[i]= stackpos - cur_frame();
-        put("movl %s, -%d(%%rbp)",x86[i],address[i]);        
+        put("movl %s, -%d(%%rbp)",x86[i],address[i]);
     }
 
     put("jmp for_cmp%d", sym);
