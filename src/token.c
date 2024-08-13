@@ -12,6 +12,7 @@ char** tokens = NULL;
 unsigned int tokInd =0;
 unsigned int tokLen = 0;
 bool *marked;
+
 unsigned int markedLen;
 
 static void clear_nfa(NFA *nfa);
@@ -38,7 +39,7 @@ void free_nfa() {
     clear_nfa(nfaSTRING);
 }
 
-static STACK *init_stack(int len) {
+static STACK *init_stack(unsigned int len) {
     STACK * stack;
     int arrlen = (len == 0) ? DEFAULT_STACK_SIZE : len;
     stack = (STACK*) malloc(sizeof(STACK) + sizeof(int) * (arrlen - 1));
@@ -176,22 +177,23 @@ static NFA * createNFA(char * re) {
     return nfa;
 }
 
-static STACK* DEPTH_FIRST(GRAPH * g, int v) {
-    STACK* s = init_stack(0);
-    STACK* eps = init_stack(10);
+static void DEPTH_FIRST(STACK* eps, GRAPH * g, int v) {
+    clear_stack(eps);
+    STACK* s = init_stack(5);
     if (marked) {
         for (int i = 0; i < markedLen; i++) marked[i] = false;
-        if (g->v > markedLen) marked = realloc(marked, sizeof(bool) * g->v);
+        if (g->v > markedLen)
+            marked = realloc(marked, sizeof(bool) * g->v);
         markedLen = g->v;
     } else {
         marked = (bool*) malloc(sizeof(bool) * g->v);
         markedLen = g->v;
+        for (int i = 0; i < markedLen; i++) marked[i] = false;
     }
     
     push(s, v);
     while (s->last) {
         int t = pop(s);
-        
         if (!marked[t]) {
             push(eps, t);
             marked[t] = true;
@@ -204,12 +206,12 @@ static STACK* DEPTH_FIRST(GRAPH * g, int v) {
         }
     }
     free(s);
-    return eps;
 }
 static bool recognizes_nfa(NFA *nfa, char *str) {
-    STACK* dfs = DEPTH_FIRST(nfa->g, 0);
+    STACK* dfs = init_stack(0);
     STACK * pc = init_stack(10);
     STACK* aux = init_stack(10);
+    DEPTH_FIRST(dfs,nfa->g, 0);
     int len = strlen(str);
     
     for (int v = 0; v < nfa->g->v; v++) 
@@ -222,7 +224,7 @@ static bool recognizes_nfa(NFA *nfa, char *str) {
                 
                 if (nfa->re[v] == '[') {
                     assert(nfa->re[v+2] == '-');
-                    if (str[i] >= nfa->re[v+1] && str[i] <= nfa->re[v+3]) push(aux, v+4);
+                    if (str[i] >= nfa->re[v+1] && str[i] <= nfa->re[v+3]) push(aux, v+4); 
                 }
                 else if (nfa->re[v] == str[i] || nfa->re[v] == '.') push(aux, v+1);
                 
@@ -230,10 +232,9 @@ static bool recognizes_nfa(NFA *nfa, char *str) {
         }
         
         clear_stack(pc);
-        clear_stack(dfs);
 
         for (int j = 0; j < aux->last; j++) {
-            dfs = DEPTH_FIRST(nfa->g, aux->arr[j]);
+            DEPTH_FIRST(dfs,nfa->g, aux->arr[j]);
             for (int v = 0; v < nfa->g->v;v++)
                 if (marked[v]) push(pc, v);
         }
@@ -347,7 +348,7 @@ bool isBINEXP(char * str) {
 }
 
 
-bool match(char * str1, const char* str2) {
+bool match(char * str1, char* str2) {
     return (strcmp(str1, str2) == 0);
 }
 char * next_token() {

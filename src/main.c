@@ -4,6 +4,7 @@
 TAC_Entry * TacArr;
 unsigned int TacInd = 0;
 
+
 int main(int argc, char  *argv[])
 {
 
@@ -78,7 +79,8 @@ int main(int argc, char  *argv[])
     }
     free(statements);
     free(tar_path_name);
-//    freeTokensArr();
+    free(marked);
+    freeTokensArr();
     free_s_table();
     free_nfa();
     fclose(src);

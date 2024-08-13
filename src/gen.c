@@ -71,7 +71,7 @@ static void data_section() {
         
         while ((*list)->id != i) list = &S_TABLE->list[ind]->next;
         if ((*list)->type == type_string) {
-            put("str%d: .ascii \"%s\"", (*list)->id, (*list)->data.c);
+            put("str%d: .ascii \"%s\"", i, (*list)->data.c);
         }
     }
 }
@@ -449,10 +449,8 @@ void handle_common_statements(AST * node) {
         put("");
         AST * identifier = arg->oper.assignExp.identifier;
         int sym = identifier->oper.symbol;
-        int addr;
-        if (S_TABLE->inds[sym] != -1) { // is in use
-            addr = S_TABLE->list[S_TABLE->inds[sym]]->data.addr;
-        } else {
+        int addr = getAddrByAST(identifier, S_TABLE);
+        if (addr == 0) {
             stackpos += 4;
             addr = stackpos - cur_frame();
             insert_hashmap_addr(S_TABLE, addr, sym);
@@ -596,7 +594,7 @@ static void put_notab(char * format, ...) {
 }
 
 
-void make_target_src() { //my brain hurts
+void make_target_src() {
 
     tar = fopen(tar_path_name, "w"); 
     put(".code64");

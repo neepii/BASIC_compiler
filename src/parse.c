@@ -5,7 +5,8 @@
 
 int exit_code = 0;
 int ParenthesisLvl = 0;
-static void map_tac(TAC *tac, void* (*f)(void *));
+static void map_tac(TAC *tac, void (*f)(void *));
+
 static AST * parse_OneWordStatementExp(int stmt);
 static AST * parse_CommonExp(AST* (*f)(void),int stmt);
 static AST * parse_IfStatementExp();
@@ -20,8 +21,8 @@ static AST * parse_WendStatementExp();
 static AST * parse_NextStatementExp();
 static AST * parse_GotoStatementExp();
 static AST * parse_ForStatementExp();
-static AST * parse_BinaryExp();
-static AST * parse_UnaryExp();
+static AST * parse_BinaryExp(AST *left, char *operator, AST * right);
+static AST * parse_UnaryExp(char *operator);
 static AST * parse_IntExp();
 static AST * parse_StrExp();
 static AST * parse_NumLineExp();
@@ -194,7 +195,7 @@ void printAST(AST * ast) {
 
 }
 
-void map_ast(AST * ast, void* (*f)(void*)) {
+void map_ast(AST * ast, void (*f)(void*)) {
     if (ast == NULL) {
         return;
     }
@@ -255,7 +256,7 @@ void map_ast(AST * ast, void* (*f)(void*)) {
     f(ast);
 }
 
-static void map_tac(TAC *tac, void* (*f)(void *)) {
+static void map_tac(TAC *tac, void (*f)(void *)) {
     f(tac->arr);
     f(tac);
 }

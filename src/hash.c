@@ -47,7 +47,6 @@ void insert_hashmap_addr(hashmap * table, int data, int id) {
     }
     (*p)->data.addr = data;
 }
-
 int getId(char * str, hashmap * table) {
     int ind = (int) hash(str) % S_TABLE_SIZE;
     LL_NODE ** p = (table->list[ind]) ? &table->list[ind] : NULL;
@@ -59,7 +58,6 @@ int getId(char * str, hashmap * table) {
 }
 
 int getAddrByID(int sym, hashmap * table) {
-
     int ind = table->inds[sym];
     LL_NODE ** p = &S_TABLE->list[ind];
     while((*p) != NULL) {

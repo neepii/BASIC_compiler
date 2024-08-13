@@ -1,5 +1,6 @@
 #ifndef TOKEN_H_
 #define TOKEN_H_
+#include <stdio.h>
 
 typedef enum wordtype {
   WT_CHAR,
@@ -57,7 +58,10 @@ bool isBINEXP(char *str);
 bool isNUM(char c);
 void init_nfa();
 void free_nfa();
+bool match(char * str1, char* str2);
 void test_regex(char *str);
+
+extern bool *marked;
 
 extern NFA *nfaINTEGER;
 extern NFA *nfaSTRING;

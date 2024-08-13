@@ -1,6 +1,6 @@
 #ifndef PARSE_H_
 #define PARSE_H_
-#include "basicc.h"
+
 #define AST_STR_LEN 20
 #define TAC_ENTRIES 512 
 #define LIVE_INTER_LEN 15
@@ -133,7 +133,7 @@ typedef struct exp
 
 void printAST(AST* ast);
 AST * AllocNode();
-void map_ast(AST * ast, void* (*f)(void*));
+void map_ast(AST * ast, void (*f)(void*));
 AST * parse_AST();
 void freeTokensArr();
 void allocTokensArr();
@@ -143,7 +143,6 @@ char * next_token();
 void printParsedLine(AST * ast);
 void parse_error(char * str);
 void parse_syntax_error(char* str);
-bool match(char*, const char*);
 void FreeAST(AST * ast);
 TAC * ASTtoTAC(AST * node);
 int postfix_GetIndex(char * str);
