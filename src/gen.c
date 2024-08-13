@@ -63,7 +63,6 @@ static void data_section() {
     put(".lcomm digitspace, 16");
     put(".lcomm bytestorage, 1");
     put(".lcomm stringspace, 32");
-    put_notab("int_max: .quad 2147483647");
     for (int i = 0; i < S_TABLE_SIZE; i++)
     {
         if (S_TABLE->inds[i] == -1) break;   
@@ -84,7 +83,6 @@ static void multi_mov(int regs, ...) {
     bool pushed[REG_COUNT] = {false};
     for (int i = 0; i < REG_COUNT; i++) {
         int bit = 1 << i;
-        char * reg_p;
         if (regs & bit) {
             if (RegIsOccupied[i]) {
                 put("push %s", getReg(i));
@@ -450,13 +448,22 @@ void handle_common_statements(AST * node) {
     case op_let: {
         put("");
         AST * identifier = arg->oper.assignExp.identifier;
+        int sym = identifier->oper.symbol;
+        int addr;
+        if (S_TABLE->inds[sym] != -1) { // is in use
+            addr = S_TABLE->list[S_TABLE->inds[sym]]->data.addr;
+        } else {
+            stackpos += 4;
+            addr = stackpos - cur_frame();
+            insert_hashmap_addr(S_TABLE, addr, sym);
+        }
         char * value = eval_arith_exp(arg->oper.assignExp.value);
         char x86[40];
-        stackpos += 4;
+
         x86_64_to_x86(value,x86);
         put("sub $4, %rsp");
-        put("movl %s, -%d(%%rbp)",x86,stackpos-cur_frame());
-        insert_hashmap_addr(S_TABLE,stackpos- cur_frame(), identifier->oper.symbol);
+        put("movl %s, -%d(%%rbp)",x86,addr);
+
         break;
     }
     case op_next: {

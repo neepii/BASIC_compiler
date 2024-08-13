@@ -92,7 +92,7 @@ itoa_convert_reg:
     cmp $0x7fffffff, %rax
     jle itoa_loop
     xor $0xffffffff, %edi
-    inc %edi     #turns one complement to two complement
+    inc %edi
     mov %edi, %eax
     mov $1, %r10
 

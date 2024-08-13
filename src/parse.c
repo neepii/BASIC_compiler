@@ -495,7 +495,8 @@ static AST * parse_AssignExp() {
     }
     node->oper.assignExp.identifier = identifier;
     node->oper.assignExp.value = value;
-    add_symbol(node);
+    if (identifier->tag != tag_symbol)
+        add_symbol(node);
 
     return node;
 }
