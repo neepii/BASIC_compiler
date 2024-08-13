@@ -70,37 +70,38 @@ strlen_end:
 #;rax - buffer
 #;rdi - dword (a integer to convert)
 #uses rsi rdi r8 r9 rcx rdx r10
-uitoa:
+itoa:
 
 	movq %rax, %rsi
 
 	movl %edi, %eax
 
 	cmp $0, %rax
- 	jnz uitoa_convert_reg
+ 	jnz itoa_convert_reg
 	movb $48, (%rsi)
 	inc %esi
 	movb $0, (%rsi)
 	mov $1, %rax
-	jmp uitoa_end
+	jmp itoa_end
 	
-uitoa_convert_reg:
+itoa_convert_reg:
     xor %rcx, %rcx
     xor %r10, %r10
     mov $10, %r9
     
     cmp $0x7fffffff, %rax
-    jle uitoa_loop
+    jle itoa_loop
     xor $0xffffffff, %edi
+    inc %edi     #turns one complement to two complement
     mov %edi, %eax
     mov $1, %r10
 
-uitoa_loop:
+itoa_loop:
 	xor %rdx, %rdx
 	div %r9
 	inc %ecx
 	cmp $0, %rax
-	jnz uitoa_loop
+	jnz itoa_loop
 
 	inc %ecx
 
@@ -110,17 +111,17 @@ uitoa_loop:
 	movb $0,(%rsi)
 	movl %edi, %eax
 	dec %ecx
-uitoa_convert:
+itoa_convert:
 	xor %rdx, %rdx
 	dec %rsi
 	div %r9
 	add $48, %rdx
 	movb %dl,(%rsi)
-	loopnz uitoa_convert
+	loopnz itoa_convert
 	mov %r8, %rax
     cmp $0, %r10
-    je uitoa_end
+    je itoa_end
     dec %rsi
     movb $45, (%rsi) 
-uitoa_end:
+itoa_end:
 	ret

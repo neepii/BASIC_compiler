@@ -271,7 +271,7 @@ char * put_tac(int num, TAC* tac, int *regArr) {
         }
     }
 
-    if (! (isTempVar(args[0]) || isTempVar(args[1])) ) {
+    if (!(isTempVar(args[0]) || isTempVar(args[1])) ) {
         new_ind = requestReg(args[1].c, regArr);
         char * reg_temp = getReg(new_ind);
 	    if (RegIsNotCleared[new_ind]) put("xor %s, %s", reg_temp, reg_temp);
@@ -306,16 +306,16 @@ char * put_tac(int num, TAC* tac, int *regArr) {
         handle_cmp_op(regArr, args, str, "sete");
         break;
     case op_greater:
-        handle_cmp_op(regArr, args, str, "setng");
+        handle_cmp_op(regArr, args, str, "setg");
         break;
     case op_less:
-        handle_cmp_op(regArr, args, str, "setnl");
+        handle_cmp_op(regArr, args, str, "setl");
         break;
     case op_less_eq:
-        handle_cmp_op(regArr, args, str, "setnle");
+        handle_cmp_op(regArr, args, str, "setle");
         break;
     case op_greater_eq:
-        handle_cmp_op(regArr, args, str, "setnge");
+        handle_cmp_op(regArr, args, str, "setge");
         break;
     case op_not_eq:
         handle_cmp_op(regArr, args, str, "setne");
@@ -358,7 +358,7 @@ static void handle_for_statement(AST * node) {
         (node->oper.forstatementExp.step) ? node->oper.forstatementExp.step : NULL
     };
     
-    put("sub $%d, %rsp", (nodes[3] != NULL) ? 12 : 8);
+    put("sub $%d, %rsp", (nodes[2] != NULL) ? 12 : 8);
     for (int i = 0; i < 3; i++) {
         if (nodes[i] == NULL) continue;
         values[i] = eval_arith_exp(nodes[i]);
@@ -407,7 +407,7 @@ void handle_common_statements(AST * node) {
                 put("mov $digitspace, %%rax");
                 put("mov %s, %%rdi", reg);
             }
-            call("uitoa");
+            call("itoa");
             put("mov %%rax, %%rdx");
             multi_mov(REG_AX | REG_SI | REG_DI, "$1", "$digitspace", "$1");
         } else { //is symbol
@@ -423,7 +423,7 @@ void handle_common_statements(AST * node) {
                 sprintf(str, "-%d(%%rbp)", addr);
                 put("mov %s, %%rax", "$digitspace");
                 put("movl %s, %%edi", str);
-                call("uitoa");
+                call("itoa");
                 put("mov %%rax, %%rdx");
                 multi_mov(REG_AX | REG_SI | REG_DI, "$1", "$digitspace", "$1");
                 break; 

@@ -320,15 +320,18 @@ static AST * parse_PrintStatementExp() {
     node->tag = tag_common_statement;
     get_next_token();
     node->oper.commonExp.stmt = op_print;
+
     if (isSTRING(str)) {
         node->oper.commonExp.arg = parse_StrExp();
         add_symbol(node->oper.commonExp.arg);
-    } else if (isVAR(str)) {
+    }
+    else if (isINT(str) || isUNARY(str) || next_token()) {
+        node->oper.commonExp.arg = parse_arith_expression();
+    }
+    else if (isVAR(str)) {
         node->oper.commonExp.arg = AllocNode();
         node->oper.commonExp.arg->oper.symbol = getId(str, S_TABLE);
         node->oper.commonExp.arg->tag = tag_symbol;
-    } else if (isINT(str) || isUNARY(str)) {
-        node->oper.commonExp.arg = parse_arith_expression();
     }
     
     return node;
@@ -685,8 +688,8 @@ static char * FillTac(AST * ast, TAC * tac, int * ind) {
     }
     sprintf(res.c, "%dt", *ind); // t for temp
     tac->arr[*ind].operator = ast->oper.binaryExp.operator;
-    tac->arr[*ind].arg1.i = args[0].i;
-    tac->arr[*ind].arg2.i = args[1].i;
+    tac->arr[*ind].arg1.i = args[1].i;
+    tac->arr[*ind].arg2.i = args[0].i;
     strcpy(tac->arr[*ind].result.c, res.c);
     return tac->arr[(*ind)++].result.c;
 }
