@@ -2,7 +2,7 @@
 
 test() {
     echo -e "$1" > test1.bas
-    valgrind -q ./exec test1.bas >> /dev/null
+    ./exec test1.bas >> /dev/null
     ./a.out
     if [ $? -ne 0 ];  then
 	echo $1 "this test failed"

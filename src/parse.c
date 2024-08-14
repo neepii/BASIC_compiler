@@ -1,12 +1,10 @@
-
 #include "basicc.h"
-
-
 
 int exit_code = 0;
 int ParenthesisLvl = 0;
 static void map_tac(TAC *tac, void (*f)(void *));
-
+static AST * parse_ReturnStatementExp();
+static AST * parse_GoSubStatementExp();
 static AST * parse_OneWordStatementExp(int stmt);
 static AST * parse_CommonExp(AST* (*f)(void),int stmt);
 static AST * parse_IfStatementExp();
@@ -103,6 +101,12 @@ static void print_stmt(int stmt) {
             break;
         case op_goto:
             printf("GOTO");
+            break;
+        case op_gosub:
+            printf("GOSUB");
+            break;
+        case op_return:
+            printf("RETURN");
             break;
         default:
             break;
@@ -271,6 +275,19 @@ void FreeAST(AST * ast) {
     map_ast(ast, free);
 }
 
+AST * bsearch_statements(AST ** stmts, int len, int tar_numline) {
+    int i = 0, j = len - 1;
+    int mid;
+    while(i <= j) {
+        mid = (i + j) / 2;
+        assert(stmts[mid]->tag == tag_numline);
+        if (tar_numline > stmts[mid]->oper.numline.value) i = mid + 1; 
+        if (tar_numline < stmts[mid]->oper.numline.value) j = mid - 1;
+        if (tar_numline == stmts[mid]->oper.numline.value) return stmts[mid];
+    }
+    return NULL;
+}
+
 static AST * parse_OneWordStatementExp(int stmt) {
     AST * node = AllocNode();
     node->tag = tag_one_word_statement;
@@ -307,7 +324,9 @@ static AST * parse_IfStatementExp() {
         node->oper.ifstatementExp.elseExp = parse_AST();
     }
     return node;
-    
+}
+static AST * parse_ReturnStatementExp() {
+    return parse_OneWordStatementExp(op_return);
 }
 static AST * parse_EndStatementExp() {
     return parse_CommonExp(parse_OneWordStatementExp, op_end);
@@ -341,7 +360,7 @@ static AST * parse_LetStatementExp() {
     return parse_CommonExp(parse_AssignExp, op_let);
 }
 static AST * parse_InputStatementExp() {
-    AST *node =  parse_CommonExp(parse_VarExp, op_input);
+    AST * node =  parse_CommonExp(parse_VarExp, op_input);
     add_symbol(node->oper.commonExp.arg);
     return node;
 }
@@ -360,13 +379,12 @@ static AST * parse_NextStatementExp() {
 static AST * parse_GotoStatementExp() {
     AST * node = parse_CommonExp(parse_IntExp, op_goto);
     int num = node->oper.commonExp.arg->oper.intExp;
-    for (int i = 0;; i++)
-    {
-        if (statements[i]->tag == tag_numline && statements[i]->oper.numline.value == num){ // what if theres no numline?
-            statements[i]->oper.numline.isGotoLabel=true;
-            break;
-        }
-    }
+    push_s(goto_s, num);
+    return node;
+}
+static AST *parse_GoSubStatementExp() {
+    AST * node = parse_GotoStatementExp();
+    node->oper.commonExp.stmt = op_gosub;
     return node;
 }
 
@@ -514,6 +532,7 @@ static AST * parse_VarExp() {
     } else {
 	    strcpy(node->oper.varExp, cur_token());
 	    node->tag = tag_var;
+        add_symbol(node);
     }
     return node;
 }
@@ -747,7 +766,7 @@ AST * parse_AST() { // lvl starts with 0
     }
 
     if (tokInd == 0 && isINT(cur_token())) return parse_NumLineExp();
-    
+
     unsigned long t = hash(cur_token());
     if (match(cur_token(), "")) return NULL;
     switch (t)
@@ -762,7 +781,9 @@ AST * parse_AST() { // lvl starts with 0
     case WHILE_H: return parse_WhileStatementExp();
     case WEND_H: return parse_WendStatementExp();
     case REM_H: return parse_RemStatementExp();
+    case GOSUB_H: return parse_GoSubStatementExp();
     case GOTO_H: return parse_GotoStatementExp();
+    case RETURN_H: return parse_ReturnStatementExp();
     case CLS_H: return parse_ClsStatementExp();
     default: return parse_AssignExp();
     }

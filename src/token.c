@@ -39,7 +39,7 @@ void free_nfa() {
     clear_nfa(nfaSTRING);
 }
 
-static STACK *init_stack(unsigned int len) {
+STACK *init_stack(unsigned int len) {
     STACK * stack;
     int arrlen = (len == 0) ? DEFAULT_STACK_SIZE : len;
     stack = (STACK*) malloc(sizeof(STACK) + sizeof(int) * (arrlen - 1));
@@ -49,9 +49,9 @@ static STACK *init_stack(unsigned int len) {
     return stack;
 }
 
-static void clear_stack(STACK *s) { s->last = 0; }
-static int top_stack(STACK *s) { return s->arr[s->last - 1]; }
-static bool stack_is_empty(STACK *s) { return s->last == 0; }
+void clear_stack(STACK *s) { s->last = 0; }
+int top_stack(STACK *s) { return s->arr[s->last - 1]; }
+bool stack_is_empty(STACK *s) { return s->last == 0; }
 
 
 static char *stack_to_str(STACK *s) { //pretty printing
@@ -65,7 +65,7 @@ static char *stack_to_str(STACK *s) { //pretty printing
     return str;
 }
 
-static void push(STACK *st, int data) {
+void push_s(STACK *st, int data) {
     if (st->last > st->arrlen) {
         st->arrlen *= 2;
         st = realloc(st, sizeof(STACK) + sizeof(int) * (st->arrlen - 1));
@@ -73,7 +73,7 @@ static void push(STACK *st, int data) {
     st->arr[st->last++] = data;
 }
 
-static int pop(STACK *st) {
+int pop_s(STACK *st) {
     if (st->arrlen / st->last == 3) {
         st->arrlen /= 2;
         st = realloc(st, sizeof(STACK) + sizeof(int) * (st->arrlen - 1));
@@ -144,19 +144,19 @@ static NFA * createNFA(char * re) {
     for (int i = 0 ; i < M; i++) {
         int lp = i;
         if (re[i] == '(' || re[i] == '|' || re[i] == '[') {
-            push(ops, i);
+            push_s(ops, i);
         }
         else if(re[i] == ')') {
-            int or = pop(ops);
+            int or = pop_s(ops);
             if (re[or] == '|') {
-                lp = pop(ops);
+                lp = pop_s(ops);
                 add_edge_graph(G, lp, or+1);
                 add_edge_graph(G, or, i);
             }
             else lp = or;
         }
         else if (re[i] == ']') {
-            lp = pop(ops);
+            lp = pop_s(ops);
             assert(re[lp] == '[');
         }
         if (i < M - 1 && re[i+1] == '*') {
@@ -191,17 +191,17 @@ static void DEPTH_FIRST(STACK* eps, GRAPH * g, int v) {
         for (int i = 0; i < markedLen; i++) marked[i] = false;
     }
     
-    push(s, v);
+    push_s(s, v);
     while (s->last) {
-        int t = pop(s);
+        int t = pop_s(s);
         if (!marked[t]) {
-            push(eps, t);
+            push_s(eps, t);
             marked[t] = true;
         }
         for (int i = 0; i < g->adj[t]->n; i++) {
             int adj_v = g->adj[t]->arr[i];
             if (!marked[adj_v]) {
-                push(s, adj_v);
+                push_s(s, adj_v);
             }
         }
     }
@@ -215,7 +215,7 @@ static bool recognizes_nfa(NFA *nfa, char *str) {
     int len = strlen(str);
     
     for (int v = 0; v < nfa->g->v; v++) 
-        if (marked[v]) push(pc, v);
+        if (marked[v]) push_s(pc, v);
     
     for (int i = 0; i < len; i++) { 
         for (int j = 0; j < pc->last; j++) { //
@@ -224,9 +224,9 @@ static bool recognizes_nfa(NFA *nfa, char *str) {
                 
                 if (nfa->re[v] == '[') {
                     assert(nfa->re[v+2] == '-');
-                    if (str[i] >= nfa->re[v+1] && str[i] <= nfa->re[v+3]) push(aux, v+4); 
+                    if (str[i] >= nfa->re[v+1] && str[i] <= nfa->re[v+3]) push_s(aux, v+4); 
                 }
-                else if (nfa->re[v] == str[i] || nfa->re[v] == '.') push(aux, v+1);
+                else if (nfa->re[v] == str[i] || nfa->re[v] == '.') push_s(aux, v+1);
                 
             }
         }
@@ -236,7 +236,7 @@ static bool recognizes_nfa(NFA *nfa, char *str) {
         for (int j = 0; j < aux->last; j++) {
             DEPTH_FIRST(dfs,nfa->g, aux->arr[j]);
             for (int v = 0; v < nfa->g->v;v++)
-                if (marked[v]) push(pc, v);
+                if (marked[v]) push_s(pc, v);
         }
         clear_stack(aux);
     }

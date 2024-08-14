@@ -9,9 +9,9 @@
 #include <assert.h>
 #include <unistd.h>
 #include <limits.h>
+#include "token.h"
 #include "parse.h"
 #include "hash.h"
-#include "token.h"
 #include "gen.h"
 
 //output of test-hash
@@ -27,6 +27,8 @@
 #define END_H 215
 #define REM_H 228
 #define GOTO_H 313
+#define GOSUB_H 384
+#define RETURN_H 480
 
 #define PLUS_H 43
 #define MINUS_H 45
@@ -50,7 +52,8 @@ extern char ** tokens;
 extern unsigned int tokInd;
 extern unsigned int tokLen;
 extern char * tar_path_name;
-extern AST** statements;
+extern AST **statements;
+
 
 
 

@@ -3,7 +3,7 @@
 #define STATEMENTS_SIZE 50
 TAC_Entry * TacArr;
 unsigned int TacInd = 0;
-
+STACK *goto_s;
 
 int main(int argc, char  *argv[])
 {
@@ -50,6 +50,7 @@ int main(int argc, char  *argv[])
         exit(1);
     }
     introduce_s_table();
+    goto_s = init_stack(0);
     int loop = true;
     statements = (AST**)malloc(sizeof(AST*) * STATEMENTS_SIZE);
     for (int  i = 0; i < STATEMENTS_SIZE; i++)
@@ -66,6 +67,11 @@ int main(int argc, char  *argv[])
         i++;
     }
     sortAST(statements,0,i-1);
+    while (!stack_is_empty(goto_s)) {
+        int num = pop_s(goto_s);
+        AST * goto_stmt = bsearch_statements(statements, i, num);
+        goto_stmt->oper.numline.isGotoLabel = true;
+    }
     for (int j = 0; j < i; j++)
     {
         printParsedLine(statements[j]);
@@ -80,6 +86,7 @@ int main(int argc, char  *argv[])
     free(statements);
     free(tar_path_name);
     free(marked);
+    free(goto_s);
     freeTokensArr();
     free_s_table();
     free_nfa();

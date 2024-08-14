@@ -8,14 +8,17 @@ struct nAST{
     int key;
     AST * ast;
 };
+#define NON_HEAP_STACK_SIZE 50
+unsigned int cur_pos;
 //stacks
-unsigned int frameArr[50] = {0};
+unsigned int frameArr[NON_HEAP_STACK_SIZE] = {0};
 unsigned int frameInt = 0;
-unsigned char counterArr[50] = {0};
+unsigned char counterArr[NON_HEAP_STACK_SIZE] = {0};
 unsigned char counterInt = 0;
 unsigned char counterAddr = 0;
-struct nAST whileArr[50] = {0};
+struct nAST whileArr[NON_HEAP_STACK_SIZE] = {0};
 unsigned char whileInt = 0;
+
 
 #define REG_COUNT 16
 bool RegIsNotCleared[REG_COUNT] = {false};
@@ -55,7 +58,12 @@ static bool isOccupied(int *regArr, int reg);
 
 
 
-
+static void check_stack(unsigned int ind) {
+    if ((ind + 1) > NON_HEAP_STACK_SIZE) {
+        fprintf(stderr, "stack overflow\n");
+        exit(1);
+    }
+}
 
 
 static void data_section() {
@@ -71,7 +79,7 @@ static void data_section() {
         
         while ((*list)->id != i) list = &S_TABLE->list[ind]->next;
         if ((*list)->type == type_string) {
-            put("str%d: .ascii \"%s\"", i, (*list)->data.c);
+            put_notab("str%d: .ascii \"%s\"", i, (*list)->data.c);
         }
     }
 }
@@ -102,9 +110,7 @@ static void new_stack_frame() {
     push("%rbp");
     put("mov %%rsp, %%rbp");
     stackpos += 8;
-    if ((frameInt + 1) > 50) {
-        fprintf(stderr, "stack overflow\n");
-    }
+    check_stack(frameInt);
     frameArr[++frameInt] = stackpos;
 }
 static void end_stack_frame() {
@@ -234,7 +240,7 @@ char * put_tac(int num, TAC* tac, int *regArr) {
     int new_ind;
 
     for (int i = 0; i < 2; i++)
-    {
+    {        
         if (isTempVar(args[i])) {
             for (int j = num;j >= 0; j--) {
                 if (match(args[i].c, tac->arr[j].result.c)) {
@@ -246,6 +252,11 @@ char * put_tac(int num, TAC* tac, int *regArr) {
         else if (isSymbolVar(args[i])) {
             int id = postfix_GetIndex(args[i].c);
             int addr = getAddrByID(id, S_TABLE);
+            if (addr == 0) {
+                stackpos += 4;
+                addr = stackpos - cur_frame();
+                insert_hashmap_addr(S_TABLE, addr, id);
+            }
             sprintf(temp[i], "-%d(%%rbp)", addr);
             str[i] = temp[i];
 
@@ -385,7 +396,24 @@ void handle_if_statement(AST * node) {
     put_notab(".end%d:", if_ind);
     put("");
     if_ind++;
+}
 
+static void check_addr(int *addr, int sym) {
+    if (addr == 0) {
+        stackpos += 4;
+        *addr = stackpos - cur_frame();
+        insert_hashmap_addr(S_TABLE, *addr, sym);
+    }
+}
+static void handle_var_ascii(char * str, AST * arg) {
+    int addr = getAddrByID(arg->oper.symbol, S_TABLE);
+    check_addr(&addr, arg->oper.symbol);
+    sprintf(str, "-%d(%%rbp)", addr);
+    put("mov %s, %%rax", "$digitspace");
+    put("movl %s, %%edi", str);
+    call("itoa");
+    put("mov %%rax, %%rdx");
+    multi_mov(REG_AX | REG_SI | REG_DI, "$1", "$digitspace", "$1");
 }
 
 void handle_common_statements(AST * node) {
@@ -395,7 +423,6 @@ void handle_common_statements(AST * node) {
         put("");
         char str[64] = {0};
         char len[25] = {0};
-
         if (arg->tag != tag_symbol && arg->tag != tag_assign) { //my god what have i done
             char * reg = eval_arith_exp(arg);
             if (match(reg, "%rax") ) {
@@ -417,13 +444,7 @@ void handle_common_statements(AST * node) {
                 multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "$1", len, str, "$1");
                 break;
             case type_pointer_var: {
-                int addr = getAddrByAST(arg, S_TABLE);
-                sprintf(str, "-%d(%%rbp)", addr);
-                put("mov %s, %%rax", "$digitspace");
-                put("movl %s, %%edi", str);
-                call("itoa");
-                put("mov %%rax, %%rdx");
-                multi_mov(REG_AX | REG_SI | REG_DI, "$1", "$digitspace", "$1");
+                handle_var_ascii(str, arg);
                 break; 
                 }
             }
@@ -434,15 +455,20 @@ void handle_common_statements(AST * node) {
     case op_goto:
         put("jmp goto%d",arg->oper.intExp);
         break;
+    case op_gosub:
+        put("call goto%d", arg->oper.intExp);
+        break;
     case op_input: {
         int ind = getIndexBySymbol(arg);
         multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "$0", "$32", "$stringspace", "$0");
         put("mov $stringspace, %rdi");
         call("atoi");
         stackpos += 4;
-        put("movl %%eax, -%d(%%rbp)", stackpos-cur_frame());
+        int addr = stackpos - cur_frame();
+        put("movl %%eax, -%d(%%rbp)", addr);
         strncpy(S_TABLE->list[ind]->data.c, "$stringspace", 13);
         S_TABLE->list[ind]->data.addr = stackpos - cur_frame();
+        insert_hashmap_addr(S_TABLE, addr, arg->oper.symbol);
         break;
     }
     case op_let: {
@@ -450,11 +476,7 @@ void handle_common_statements(AST * node) {
         AST * identifier = arg->oper.assignExp.identifier;
         int sym = identifier->oper.symbol;
         int addr = getAddrByAST(identifier, S_TABLE);
-        if (addr == 0) {
-            stackpos += 4;
-            addr = stackpos - cur_frame();
-            insert_hashmap_addr(S_TABLE, addr, sym);
-        }
+        check_addr(&addr, sym);
         char * value = eval_arith_exp(arg->oper.assignExp.value);
         char x86[40];
 
@@ -475,11 +497,12 @@ void handle_common_statements(AST * node) {
         put("cmp -%d(%%rbp), %s",counterAddr + 4, x86);
         put("jle for_iter%d", sym);
         RegIsOccupied[counterArr[counterInt]] = false;
-        counterInt--;
+        counterInt--; //???
         break;
     }
     case op_while: {
         static int id = 0;
+        check_stack(whileInt);
         whileArr[whileInt].key = id++;
         whileArr[whileInt].ast = arg;
         put("jmp while_cmp%d", whileArr[whileInt].key);
@@ -502,6 +525,10 @@ static void handle_one_word_statements(AST *node) {
     {
     case op_rem:
         break;
+    case op_return: {
+        put("ret");
+        break;
+    }
     case op_wend:
         put_notab("while_cmp%d:", whileArr[whileInt].key);
         char * reg = eval_arith_exp(whileArr[whileInt].ast);
@@ -542,7 +569,8 @@ static void start() {
     while (statements[i]) {
     AST * node = statements[i];
     if (node->tag == tag_numline && node->oper.numline.isGotoLabel) {
-        put_notab("goto%d:", node->oper.numline.value);
+        cur_pos = node->oper.numline.value;
+        put_notab("goto%d:", cur_pos);
         node = node->oper.numline.next;
     }
     else if (node->tag == tag_numline) node = node->oper.numline.next;

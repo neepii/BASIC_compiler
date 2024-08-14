@@ -1,9 +1,11 @@
 #ifndef PARSE_H_
 #define PARSE_H_
+#include "token.h"
 
 #define AST_STR_LEN 20
-#define TAC_ENTRIES 512 
+#define TAC_ENTRIES 512
 #define LIVE_INTER_LEN 15
+
 typedef union atom {
     double f;
     long long i;
@@ -26,6 +28,8 @@ enum statement {
     op_next,
     op_cls,
     op_goto,
+    op_gosub,
+    op_return,
     stmt_null
 };
 
@@ -148,7 +152,7 @@ TAC * ASTtoTAC(AST * node);
 int postfix_GetIndex(char * str);
 bool isSymbolVar(Atom atom);
 bool isTempVar(Atom atom);
-
+AST *bsearch_statements(AST **stmts, int len, int tar_numline);
 
 
 #endif

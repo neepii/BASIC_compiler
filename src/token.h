@@ -60,10 +60,15 @@ void init_nfa();
 void free_nfa();
 bool match(char * str1, char* str2);
 void test_regex(char *str);
-
+STACK *init_stack(unsigned int len);
+int pop_s(STACK * st);
+void push_s(STACK *st, int data);
+void clear_stack(STACK *s);
+int top_stack(STACK *s);
+bool stack_is_empty(STACK * st);
 extern bool *marked;
-
 extern NFA *nfaINTEGER;
 extern NFA *nfaSTRING;
+extern STACK *goto_s;
 
 #endif
