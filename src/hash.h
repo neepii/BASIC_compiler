@@ -8,19 +8,6 @@
 #define S_TABLE_SIZE 64
 
 
-//output of test-hash
-#define LET_H 229
-#define PRINT_H 397
-#define INPUT_H 400
-#define IF_H 143
-#define WHILE_H 377
-#define WEND_H 302
-#define FOR_H 231
-#define NEXT_H 319
-#define CLS_H 226
-#define END_H 215
-
-
 
 typedef struct ll_node {
     char name[AST_STR_LEN];

@@ -364,6 +364,13 @@ static AST * parse_InputStatementExp() {
     add_symbol(node->oper.commonExp.arg);
     return node;
 }
+
+static AST * parse_IncStatementExp() {
+    return parse_CommonExp(parse_VarExp, op_inc); 
+}
+static AST * parse_DecStatementExp() {
+    return parse_CommonExp(parse_VarExp, op_dec); 
+}
 static AST * parse_WhileStatementExp() {
     return parse_CommonExp(parse_arith_expression, op_while);
 }
@@ -785,6 +792,8 @@ AST * parse_AST() { // lvl starts with 0
     case GOTO_H: return parse_GotoStatementExp();
     case RETURN_H: return parse_ReturnStatementExp();
     case CLS_H: return parse_ClsStatementExp();
+    case DECREMENT_H: return parse_DecStatementExp();
+    case INCREMENT_H: return parse_IncStatementExp();
     default: return parse_AssignExp();
     }
     

@@ -30,6 +30,8 @@ enum statement {
     op_goto,
     op_gosub,
     op_return,
+    op_dec,
+    op_inc,
     stmt_null
 };
 

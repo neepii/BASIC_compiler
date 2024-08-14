@@ -71,6 +71,7 @@ static void data_section() {
     put(".lcomm digitspace, 16");
     put(".lcomm bytestorage, 1");
     put(".lcomm stringspace, 32");
+    put_notab("clear_escape_seq: .asciz \"\\033[2J\\033[H\"");
     for (int i = 0; i < S_TABLE_SIZE; i++)
     {
         if (S_TABLE->inds[i] == -1) break;   
@@ -471,6 +472,16 @@ void handle_common_statements(AST * node) {
         insert_hashmap_addr(S_TABLE, addr, arg->oper.symbol);
         break;
     }
+    case op_dec:{
+        int addr = getAddrByAST(arg, S_TABLE);
+        put("dec -%d(%%rbp)", addr);
+        break;
+    }
+    case op_inc: {
+        int addr = getAddrByAST(arg, S_TABLE);
+        put("inc -%d(%%rbp)", addr);
+        break;
+    }
     case op_let: {
         put("");
         AST * identifier = arg->oper.assignExp.identifier;
@@ -525,17 +536,20 @@ static void handle_one_word_statements(AST *node) {
     {
     case op_rem:
         break;
-    case op_return: {
+    case op_cls:
+        multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "$1", "$7", "$clear_escape_seq", "$1");
+        break;
+    case op_return:
         put("ret");
         break;
-    }
-    case op_wend:
+    case op_wend: {
         put_notab("while_cmp%d:", whileArr[whileInt].key);
         char * reg = eval_arith_exp(whileArr[whileInt].ast);
         put("cmp $1, %s", reg);
         put("jge while_iter%d", whileArr[whileInt].key);
         whileInt++;
         break;
+    }
     default:
         break;
     }
