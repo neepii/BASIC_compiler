@@ -461,23 +461,15 @@ void handle_common_statements(AST * node) {
         put("call goto%d", arg->oper.intExp);
         break;
     case op_input: {
-        int ind = getIndexBySymbol(arg);
         multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "$0", "$32", "$stringspace", "$0");
         put("mov $stringspace, %rdi");
         call("atoi");
         int addr = getAddrByAST(arg, S_TABLE);
         check_addr(&addr, arg->oper.symbol);
         put("movl %%eax, -%d(%%rbp)", addr);
-        break;
-    }
-    case op_dec:{
-        int addr = getAddrByAST(arg, S_TABLE);
-        put("dec -%d(%%rbp)", addr);
-        break;
-    }
-    case op_inc: {
-        int addr = getAddrByAST(arg, S_TABLE);
-        put("inc -%d(%%rbp)", addr);
+        strncpy(S_TABLE->list[ind]->data.c, "$stringspace", 13);
+        S_TABLE->list[ind]->data.addr = stackpos - cur_frame();
+        insert_hashmap_addr(S_TABLE, addr, arg->oper.symbol);
         break;
     }
     case op_dec:{
