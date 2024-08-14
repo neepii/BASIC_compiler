@@ -360,11 +360,8 @@ static AST * parse_LetStatementExp() {
     return parse_CommonExp(parse_AssignExp, op_let);
 }
 static AST * parse_InputStatementExp() {
-    AST * node =  parse_CommonExp(parse_VarExp, op_input);
-    add_symbol(node->oper.commonExp.arg);
-    return node;
+    return parse_CommonExp(parse_VarExp, op_input);
 }
-
 static AST * parse_IncStatementExp() {
     return parse_CommonExp(parse_VarExp, op_inc); 
 }

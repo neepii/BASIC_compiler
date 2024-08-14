@@ -50,7 +50,6 @@ static void pop(char * str);
 static void push(char * str);
 static void call(char *str);
 static void handle_statements(AST *node);
-static bool getLastChar(Atom atom, char c);
 static void handle_one_arg_op(int* regArr, Atom args[2], char * str[2], char * op);
 static void handle_cmp_op(int * regArr, Atom args[2], char* str[2], char * op);
 static char *getReg(int ind);
@@ -400,7 +399,7 @@ void handle_if_statement(AST * node) {
 }
 
 static void check_addr(int *addr, int sym) {
-    if (addr == 0) {
+    if (*addr == 0) {
         stackpos += 4;
         *addr = stackpos - cur_frame();
         insert_hashmap_addr(S_TABLE, *addr, sym);
@@ -447,7 +446,9 @@ void handle_common_statements(AST * node) {
             case type_pointer_var: {
                 handle_var_ascii(str, arg);
                 break; 
-                }
+            }
+            default:
+                break;
             }
         }
         call("newline");
@@ -464,12 +465,19 @@ void handle_common_statements(AST * node) {
         multi_mov(REG_AX | REG_DX | REG_SI | REG_DI, "$0", "$32", "$stringspace", "$0");
         put("mov $stringspace, %rdi");
         call("atoi");
-        stackpos += 4;
-        int addr = stackpos - cur_frame();
+        int addr = getAddrByAST(arg, S_TABLE);
+        check_addr(&addr, arg->oper.symbol);
         put("movl %%eax, -%d(%%rbp)", addr);
-        strncpy(S_TABLE->list[ind]->data.c, "$stringspace", 13);
-        S_TABLE->list[ind]->data.addr = stackpos - cur_frame();
-        insert_hashmap_addr(S_TABLE, addr, arg->oper.symbol);
+        break;
+    }
+    case op_dec:{
+        int addr = getAddrByAST(arg, S_TABLE);
+        put("dec -%d(%%rbp)", addr);
+        break;
+    }
+    case op_inc: {
+        int addr = getAddrByAST(arg, S_TABLE);
+        put("inc -%d(%%rbp)", addr);
         break;
     }
     case op_dec:{
