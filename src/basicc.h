@@ -29,8 +29,8 @@
 #define GOTO_H 313
 #define GOSUB_H 384
 #define RETURN_H 480
-#define DECREMENT_H 663
-#define INCREMENT_H 677
+#define DEC_H 204
+#define INC_H 218
 
 #define PLUS_H 43
 #define MINUS_H 45

@@ -108,6 +108,12 @@ static void print_stmt(int stmt) {
         case op_return:
             printf("RETURN");
             break;
+        case op_inc:
+            printf("INC");
+            break;
+        case op_dec:
+            printf("DEC");
+            break;
         default:
             break;
     }
@@ -789,9 +795,15 @@ AST * parse_AST() { // lvl starts with 0
     case GOTO_H: return parse_GotoStatementExp();
     case RETURN_H: return parse_ReturnStatementExp();
     case CLS_H: return parse_ClsStatementExp();
-    case DECREMENT_H: return parse_DecStatementExp();
-    case INCREMENT_H: return parse_IncStatementExp();
-    default: return parse_AssignExp();
+    case DEC_H: return parse_DecStatementExp();
+    case INC_H: return parse_IncStatementExp();
+    default: {
+        AST * let = AllocNode();
+        let->tag = tag_common_statement;
+        let->oper.commonExp.stmt = op_let;
+        let->oper.commonExp.arg = parse_AssignExp();
+        return let;
+    }
     }
     
     return NULL;
