@@ -546,7 +546,11 @@ static AST * parse_VarExp() {
     }
     return node;
 }
-
+static AST * parse_FloatExp() {
+    AST * node = AllocNode();
+    node->tag = tag_float;
+    
+}
 
 static AST * parse_leaf() {
     char * token = cur_token();
@@ -558,7 +562,7 @@ static AST * parse_leaf() {
     if (isINT(token)) return parse_IntExp();
     if (isSTRING(token)) return parse_StrExp();
     if (isVAR(token)) return parse_VarExp();
-
+    if (isFLOAT(token)) return parse_FloatExp();
     
 
     parse_error("input not found for parsing lead");

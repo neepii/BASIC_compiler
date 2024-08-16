@@ -71,6 +71,7 @@ typedef struct exp
 {
     enum {
         tag_int,
+        tag_float,
         tag_str,
         tag_call, // function
         tag_var,
@@ -90,6 +91,7 @@ typedef struct exp
     {   
         int symbol;
         int intExp;
+        char floatExp[AST_STR_LEN];
         char strExp[AST_STR_LEN];
         char varExp[AST_STR_LEN];
         struct {

@@ -23,20 +23,37 @@ static bool recognizes_nfa(NFA *nfa, char *str);
 
 NFA *nfaINTEGER;
 NFA *nfaSTRING;
+NFA *nfaCOMMON_FLOAT;
+NFA *nfaDOT_FLOAT;
+NFA *nfaSCIENTIFIC_FLOAT;
 
+
+static char *str_bool(bool b) {
+    static char * bools[2] = {"True", "False"};
+    return (b) ? bools[0] : bools[1];
+}
 void test_regex(char * str) {
-    printf("Argument is integer: %s\n", (recognizes_nfa(nfaINTEGER, str)) ? "True" : "False");
-    printf("Argument is string: %s\n", (recognizes_nfa(nfaSTRING, str)) ? "True" : "False");
+    printf("Argument is integer: %s\n", str_bool(recognizes_nfa(nfaINTEGER, str)));
+    printf("Argument is string: %s\n", str_bool(recognizes_nfa(nfaSTRING, str)));
+    printf("Argument is float: %s\n", str_bool(recognizes_nfa(nfaCOMMON_FLOAT, str)));
+    printf("Argument is float but with only dot: %s\n", str_bool(recognizes_nfa(nfaDOT_FLOAT, str)));
+    printf("Argument is float with scientific notation: %s\n", str_bool(recognizes_nfa(nfaSCIENTIFIC_FLOAT, str)));
 }
 
 void init_nfa() {
     nfaINTEGER = createNFA("(+|-)?[0-9][0-9]*");
     nfaSTRING = createNFA("\"(.)*\"");
+    nfaCOMMON_FLOAT = createNFA("(+|-)?[0-9][0-9]*.[0-9][0-9]*");
+    nfaDOT_FLOAT = createNFA("(+|-)?.[0-9][0-9]*");
+    nfaSCIENTIFIC_FLOAT = createNFA("(+|-)?[0-9][0-9]*.[0-9][0-9]*(e|E)(+|-)?[0-9][0-9]*");
 }
 
 void free_nfa() {
     clear_nfa(nfaINTEGER);
     clear_nfa(nfaSTRING);
+    clear_nfa(nfaCOMMON_FLOAT);
+    clear_nfa(nfaDOT_FLOAT);
+    clear_nfa(nfaSCIENTIFIC_FLOAT);
 }
 
 STACK *init_stack(unsigned int len) {
@@ -322,6 +339,12 @@ bool isVAR(char * str) {
 
 bool isINT(char * str) {
     return recognizes_nfa(nfaINTEGER,str);
+}
+
+bool isFLOAT(char *str) {
+    return recognizes_nfa(nfaCOMMON_FLOAT, str) ||
+           recognizes_nfa(nfaDOT_FLOAT, str) ||
+           recognizes_nfa(nfaSCIENTIFIC_FLOAT, str);
 }
 
 bool isBINEXP(char * str) {

@@ -54,6 +54,7 @@ bool isSTRING(char * str);
 bool isUNARY(char * str);
 bool isVAR(char * str);
 bool isINT(char *str);
+bool isFLOAT(char *str);
 bool isBINEXP(char *str);
 bool isNUM(char c);
 void init_nfa();
@@ -69,6 +70,9 @@ bool stack_is_empty(STACK * st);
 extern bool *marked;
 extern NFA *nfaINTEGER;
 extern NFA *nfaSTRING;
+extern NFA *nfaCOMMON_FLOAT;
+extern NFA *nfaDOT_FLOAT;
+extern NFA *nfaSCIENTIFIC_FLOAT;
 extern STACK *goto_s;
 
 #endif
