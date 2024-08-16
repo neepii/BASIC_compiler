@@ -146,6 +146,9 @@ void printAST(AST * ast) {
     case tag_str:
         printf("%s", ast->oper.strExp);
         break;
+    case tag_float:
+        printf("%s", ast->oper.floatExp);
+        break;
     case tag_common_statement:
         print_stmt(ast->oper.commonExp.stmt);
         printAST(ast->oper.commonExp.arg);
@@ -222,6 +225,7 @@ void map_ast(AST * ast, void (*f)(void*)) {
     case tag_var:
     case tag_int:
     case tag_str:
+    case tag_float:
         break;
     case tag_common_statement:
         map_ast(ast->oper.commonExp.arg,f);
@@ -549,7 +553,8 @@ static AST * parse_VarExp() {
 static AST * parse_FloatExp() {
     AST * node = AllocNode();
     node->tag = tag_float;
-    
+    strcpy(node->oper.floatExp, cur_token());
+    return node;
 }
 
 static AST * parse_leaf() {
@@ -753,7 +758,6 @@ TAC * ASTtoTAC(AST * node) {
         else {
             arr->arg2.i = node->oper.intExp;
         }
-        assert(arr->arg2.i);
         arr->arg1.i = 0;
         arr->result.i = 0;
         tac->arr = arr;

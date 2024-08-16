@@ -35,6 +35,7 @@ atoi_check_sign:
     cmp $1, %r10
     jne atoi_ret
     xor $0xffffffff, %eax
+    inc %eax
 atoi_ret:
 	ret
 	
