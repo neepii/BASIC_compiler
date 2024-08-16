@@ -20,10 +20,11 @@ struct nAST whileArr[NON_HEAP_STACK_SIZE] = {0};
 unsigned char whileInt = 0;
 
 
-#define REG_COUNT 16
+#define REG_COUNT 32
 bool RegIsNotCleared[REG_COUNT] = {false};
 bool RegIsOccupied[REG_COUNT] = {false}; //global
 bool hasEnd = false;
+
 
 
 
@@ -50,10 +51,12 @@ static void pop(char * str);
 static void push(char * str);
 static void call(char *str);
 static void handle_statements(AST *node);
-static void handle_one_arg_op(int* regArr, Atom args[2], char * str[2], char * op);
-static void handle_cmp_op(int * regArr, Atom args[2], char* str[2], char * op);
+static void handle_one_arg_op(int *regArr, Atom args[2], char *str[2],char * op, TAC * tac);
+static void handle_cmp_op(int * regArr, Atom args[2], char* str[2],char * op,  TAC * tac);
 static char *getReg(int ind);
 static bool isOccupied(int *regArr, int reg);
+static int OccupyReg_SIMD_only(int ind, int *regArr);
+static int OccupyReg_all(int ind, int *regArr);
 
 
 
@@ -71,7 +74,7 @@ static void data_section() {
     put(".lcomm bytestorage, 1");
     put(".lcomm stringspace, 32");
     put_notab("clear_escape_seq: .asciz \"\\033[2J\\033[H\"");
-    for (int i = 0; i < S_TABLE_SIZE; i++)
+    for (int i = 0; i < S_TABLE_SIZE; i++) //maybe replace it with popstack loop
     {
         if (S_TABLE->inds[i] == -1) break;   
         ind = S_TABLE->inds[i];
@@ -80,6 +83,14 @@ static void data_section() {
         while ((*list)->id != i) list = &S_TABLE->list[ind]->next;
         if ((*list)->type == type_string) {
             put_notab("str%d: .ascii \"%s\"", i, (*list)->data.c);
+        }
+    }
+    for (int i = 0; i < float_inits->last; i++) {
+        char * fl = float_inits->arr[i];
+        if (isDOT_FLOAT(fl)) {
+            put_notab("float%d: .float 0%s", i , fl);
+        } else {
+            put_notab("float%d: .float %s", i , fl);
         }
     }
 }
@@ -127,10 +138,11 @@ unsigned int cur_frame() {
   if RegArr is NULL
   it will occupy globally
  */
-static int OccupyReg(int ind, int* regArr) {
+
+static int OccupyReg(int ind, int* regArr, int start) {
     int i;
     if (regArr == NULL) { //global
-        for (i = 0; i< REG_COUNT; i++) {
+        for (i = start; i< REG_COUNT; i++) {
             if (i == 6 || i ==7) continue; // bp and sp regs
             if (!RegIsOccupied[i]) {
                 RegIsOccupied[i] = true;
@@ -138,7 +150,7 @@ static int OccupyReg(int ind, int* regArr) {
             }
         }
     } else {
-        for (i = 0; i < REG_COUNT; i++) {
+        for (i = start; i < REG_COUNT; i++) {
             if (i == 6 || i ==7) continue; 
             if (!isOccupied(regArr, i)) {
                 regArr[i] = ind;
@@ -148,6 +160,15 @@ static int OccupyReg(int ind, int* regArr) {
     }
     return -1;
 }
+
+static int OccupyReg_SIMD_only(int ind, int *regArr) {
+    return OccupyReg(ind, regArr, 16);
+}
+
+static int OccupyReg_all(int ind, int *regArr) {
+    return OccupyReg(ind, regArr, 0);
+}
+
 /*
   if regArr is NULL -> ask only global
 */
@@ -156,16 +177,19 @@ static bool isOccupied(int *regArr, int reg) {
     return (regArr[reg] != -1 || RegIsOccupied[reg]);
 }
 
-static int requestReg(char * tempVar, int * regArr) {
+static int requestReg(char * tempVar, int * regArr, TAC *tac) {
     int tempind = postfix_GetIndex(tempVar);
-    assert(tempind <= 16);
-    return OccupyReg(tempind, regArr);
+    assert(tempind <= REG_COUNT);
+    if (tac->is_float) {
+        return OccupyReg_SIMD_only(tempind, regArr);
+    }
+    return OccupyReg_all(tempind, regArr);
 }
 
-static void handle_one_arg_op(int* regArr, Atom args[2], char * str[2], char * op) {
+static void handle_one_arg_op(int* regArr, Atom args[2], char * str[2], char * op, TAC* tac) {
     put("");
     bool pop_b = false;
-    int temporary = requestReg(str[1], regArr);
+    int temporary = requestReg(str[1], regArr,tac);
     char * reg = getReg(temporary);
     
     if (isOccupied(regArr, 0) && !match(str[1], "%rax")) {
@@ -200,6 +224,7 @@ static void handle_one_arg_op(int* regArr, Atom args[2], char * str[2], char * o
     regArr[temporary] = -1;
 }
 
+
 static char * getReg(int ind) {
     static char * regs[REG_COUNT] = {
         "%rax", "%rbx", "%rcx", "%rdx",
@@ -208,15 +233,20 @@ static char * getReg(int ind) {
         "%rsp", "%rbp", //cant use this
 
         "%r8", "%r9", "%r10", "%r11",
-        "%r12", "%r13", "%r14", "%r15"
+        "%r12", "%r13", "%r14", "%r15",
+        
+        "%xmm0", "%xmm1" ,"%xmm2", "%xmm3", //SIMD registers
+        "%xmm4", "%xmm5" ,"%xmm6", "%xmm7",
+        "%xmm8", "%xmm9" ,"%xmm10", "%xmm11",
+        "$xmm12", "%xmm13" ,"%xmm14", "%xmm15",
     };
     return regs[ind];
 }
 
-static void handle_cmp_op(int * regArr, Atom args[2], char* str[2], char * op) {
+static void handle_cmp_op(int * regArr, Atom args[2], char* str[2],char * op,  TAC * tac) {
     put("cmp %s, %s", str[0], str[1]);
     if (isOccupied(regArr, 0)) {
-        int new_ind = requestReg(args[0].c, regArr);
+        int new_ind = requestReg(args[0].c, regArr, tac);
         char *reg = getReg(new_ind);
         if (RegIsNotCleared[new_ind])
             put("xor %s, %s", reg, reg);
@@ -232,6 +262,7 @@ static void handle_cmp_op(int * regArr, Atom args[2], char* str[2], char * op) {
         put("mov %%rax, %s", str[1]);
     }
 }
+
 
 char * put_tac(int num, TAC* tac, int *regArr) {
     char * str[2];
@@ -260,6 +291,11 @@ char * put_tac(int num, TAC* tac, int *regArr) {
             sprintf(temp[i], "-%d(%%rbp)", addr);
             str[i] = temp[i];
 
+        }
+        else if (isFloatVar(args[i])) {
+            int id = postfix_GetIndex(args[i].c);
+            sprintf(temp[i], "(float%d)", id);
+            str[i] = temp[i];
         } else {
             sprintf(temp[i], "$%lld", args[i].i);
             str[i] = temp[i];
@@ -281,11 +317,14 @@ char * put_tac(int num, TAC* tac, int *regArr) {
     }
 
     if (!(isTempVar(args[0]) || isTempVar(args[1])) ) {
-        new_ind = requestReg(args[1].c, regArr);
+        new_ind = requestReg(args[1].c, regArr, tac);
         char * reg_temp = getReg(new_ind);
 	    if (RegIsNotCleared[new_ind]) put("xor %s, %s", reg_temp, reg_temp);
-	    RegIsNotCleared[new_ind] = true;    
-        put("mov %s, %s",str[1], reg_temp);
+	    RegIsNotCleared[new_ind] = true;
+        
+        if (tac->is_float) put("movss %s, %s",str[1], reg_temp);
+        else put("mov %s, %s",str[1], reg_temp);
+        
         strcpy(args[1].c, reg_temp);
         str[1] = reg_temp;
     }
@@ -306,28 +345,28 @@ char * put_tac(int num, TAC* tac, int *regArr) {
         put("sub %s, %s", str[0], str[1]);
         break;
     case op_mul:
-        handle_one_arg_op(regArr, args, str, "mul");
+        handle_one_arg_op(regArr, args, str, "mul", tac);
         break;
     case op_div:
-        handle_one_arg_op(regArr, args, str, "div");
+        handle_one_arg_op(regArr, args, str, "div", tac);
         break;
     case op_equal:
-        handle_cmp_op(regArr, args, str, "sete");
+        handle_cmp_op(regArr, args, str, "sete", tac);
         break;
     case op_greater:
-        handle_cmp_op(regArr, args, str, "setg");
+        handle_cmp_op(regArr, args, str, "setg", tac);
         break;
     case op_less:
-        handle_cmp_op(regArr, args, str, "setl");
+        handle_cmp_op(regArr, args, str, "setl", tac);
         break;
     case op_less_eq:
-        handle_cmp_op(regArr, args, str, "setle");
+        handle_cmp_op(regArr, args, str, "setle", tac);
         break;
     case op_greater_eq:
-        handle_cmp_op(regArr, args, str, "setge");
+        handle_cmp_op(regArr, args, str, "setge", tac);
         break;
     case op_not_eq:
-        handle_cmp_op(regArr, args, str, "setne");
+        handle_cmp_op(regArr, args, str, "setne",tac);
         break;
     default:
         break;
@@ -346,7 +385,7 @@ char * eval_arith_exp(AST * node) {
     assert(node->tag == tag_arith);
     TAC * tac = node->oper.arithExp.lowlvl;
 
-    int * LocalRegOccup = (int*) malloc(sizeof(int) * REG_COUNT);
+    int * LocalRegOccup = (int*) malloc(sizeof(int) * REG_COUNT); // ???
     for (int i = 0; i < REG_COUNT; i++) LocalRegOccup[i] = -1; // -1 == register is free
     
     char * str = put_tac(tac->len-1, tac, LocalRegOccup);
@@ -488,11 +527,18 @@ void handle_common_statements(AST * node) {
         int addr = getAddrByAST(identifier, S_TABLE);
         check_addr(&addr, sym);
         char * value = eval_arith_exp(arg->oper.assignExp.value);
-        char x86[40];
 
-        x86_64_to_x86(value,x86);
-        put("sub $4, %rsp");
-        put("movl %s, -%d(%%rbp)",x86,addr);
+
+        if (value[1] != 'x') {
+            char x86[40];
+            x86_64_to_x86(value,x86);
+            put("sub $4, %rsp");
+            put("movl %s, -%d(%%rbp)",x86,addr);
+        } else {
+            put("sub $4, %rsp");
+            put("movss %s, -%d(%%rbp)", value, addr);
+        }
+
 
         break;
     }

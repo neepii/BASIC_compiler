@@ -26,6 +26,7 @@ NFA *nfaSTRING;
 NFA *nfaCOMMON_FLOAT;
 NFA *nfaDOT_FLOAT;
 NFA *nfaSCIENTIFIC_FLOAT;
+NFA *nfaVARIABLE;
 
 
 static char *str_bool(bool b) {
@@ -38,6 +39,7 @@ void test_regex(char * str) {
     printf("Argument is float: %s\n", str_bool(recognizes_nfa(nfaCOMMON_FLOAT, str)));
     printf("Argument is float but with only dot: %s\n", str_bool(recognizes_nfa(nfaDOT_FLOAT, str)));
     printf("Argument is float with scientific notation: %s\n", str_bool(recognizes_nfa(nfaSCIENTIFIC_FLOAT, str)));
+    printf("Argument is variable: %s\n", str_bool(recognizes_nfa(nfaVARIABLE, str)));
 }
 
 void init_nfa() {
@@ -46,6 +48,7 @@ void init_nfa() {
     nfaCOMMON_FLOAT = createNFA("(+|-)?[0-9][0-9]*.[0-9][0-9]*");
     nfaDOT_FLOAT = createNFA("(+|-)?.[0-9][0-9]*");
     nfaSCIENTIFIC_FLOAT = createNFA("(+|-)?[0-9][0-9]*.[0-9][0-9]*(e|E)(+|-)?[0-9][0-9]*");
+    nfaVARIABLE = createNFA("[A-Z][A-Z]*");
 }
 
 void free_nfa() {
@@ -54,6 +57,7 @@ void free_nfa() {
     clear_nfa(nfaCOMMON_FLOAT);
     clear_nfa(nfaDOT_FLOAT);
     clear_nfa(nfaSCIENTIFIC_FLOAT);
+    clear_nfa(nfaVARIABLE);
 }
 
 STACK *init_stack(unsigned int len) {
@@ -65,23 +69,28 @@ STACK *init_stack(unsigned int len) {
     assert(stack->arrlen);
     return stack;
 }
+STACK_STR *init_stack_str(unsigned int len) {
+    STACK_STR * stack;
+    int arrlen = (len == 0) ? DEFAULT_STACK_SIZE : len;
+    stack = (STACK_STR*) malloc(sizeof(STACK) + 20 * sizeof(char) * (arrlen - 1));
+    stack->last = 0;
+    stack->arrlen = arrlen;
+    assert(stack->arrlen);
+    return stack;
+}
 
 void clear_stack(STACK *s) { s->last = 0; }
 int top_stack(STACK *s) { return s->arr[s->last - 1]; }
 bool stack_is_empty(STACK *s) { return s->last == 0; }
+bool stack_str_is_empty(STACK_STR *s) { return s->last == 0; }
 
-
-static char *stack_to_str(STACK *s) { //pretty printing
-    static char str[50];
-    int last = 0;
-    for (int i = 0; i < s->last; i++) {
-        str[last++] = s->arr[i];
-        str[last++] = ' ';
+void push_str_s(STACK_STR *st, char * str) {
+    if (st->last > st->arrlen) {
+        st->arrlen *= 2;
+        st = realloc(st, sizeof(STACK) + 20 * sizeof(char) * (st->arrlen - 1));
     }
-    str[last] = 0;
-    return str;
+    strncpy(st->arr[st->last++], str,20);
 }
-
 void push_s(STACK *st, int data) {
     if (st->last > st->arrlen) {
         st->arrlen *= 2;
@@ -90,6 +99,13 @@ void push_s(STACK *st, int data) {
     st->arr[st->last++] = data;
 }
 
+void pop_str_s(STACK_STR *st, char addr[20]) {
+    if (st->arrlen / st->last == 3) {
+        st->arrlen /= 2;
+        st = realloc(st, sizeof(STACK) + sizeof(int) * (st->arrlen - 1));
+    }
+    strncpy(addr, st->arr[st->last--], 20);
+}
 int pop_s(STACK *st) {
     if (st->arrlen / st->last == 3) {
         st->arrlen /= 2;
@@ -311,7 +327,11 @@ bool isNUM(char c) {
     return c >= 0x30 && c <= 0x39;
 }
 
-static bool isCHAR(char c) {
+static bool isPUNCT(char c) {
+    return (c == ',' || c == '?' || c == '!' || c == ';' || c == ':');
+}
+
+static bool isLATIN(char c) {
     return (c >=0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A);
 }
 
@@ -334,12 +354,15 @@ bool isUNARY(char * str) {
 
 
 bool isVAR(char * str) {
-    return isCHAR(str[0]);
+    return recognizes_nfa(nfaVARIABLE, str);
 }
 
 bool isINT(char * str) {
-    return recognizes_nfa(nfaINTEGER,str);
+    return recognizes_nfa(nfaINTEGER, str);
 }
+bool isCOMMON_FLOAT(char *str) { return recognizes_nfa(nfaCOMMON_FLOAT, str); }
+bool isDOT_FLOAT(char *str) { return recognizes_nfa(nfaDOT_FLOAT, str); }
+bool isSCIENTIFIC_FLOAT(char *str) { return recognizes_nfa(nfaSCIENTIFIC_FLOAT, str); }
 
 bool isFLOAT(char *str) {
     return recognizes_nfa(nfaCOMMON_FLOAT, str) ||
@@ -413,7 +436,7 @@ int LineToTokens(FILE * in) {
     while(cur_char && type != WT_ETC) {
         if (!inQuotes) cur_char = (char)toupper(cur_char);
 
-        if (isQUOTE(cur_char)) {
+        if (isQUOTE(cur_char)) { // what if i could use array instead of if else ladder?
             type = WT_QUOTES;
             inQuotes = !inQuotes;
         }
@@ -426,17 +449,20 @@ int LineToTokens(FILE * in) {
         else if (cur_char == '\n') {
             type = WT_NEWLINE;
         }
-        else if (isCHAR(cur_char)) {
-            type = WT_CHAR;
+        else if (isLATIN(cur_char)) {
+            type = WT_LATIN;
         }
         else if (isOPER(cur_char)) {
             type = WT_OPER;
         } 
-        else if (isNUM(cur_char)) {
+        else if (isNUM(cur_char) || cur_char == '.') {
             type = WT_NUM;
         }
         else if (isPARENTHESIS(cur_char)) {
             type = WT_PARENTHESIS;
+        }
+        else if (isPUNCT(cur_char)) {
+            type = WT_PUNCT;
         }
         else {
             type = WT_ETC;

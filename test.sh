@@ -32,9 +32,9 @@ test "
 echo 1
 
 test "
-10 LET A = 8 * 9 + 41\n
+10 LET A = 8* 9 + 41\n
 20 print a\n
-30 LET B = 9 * 2\n
+30 LET B = 9* 2\n
 40 print b\n
 50 end
 "
@@ -42,8 +42,8 @@ echo 113
 echo 18
 
 test "
-10 LET A = 8 * 9 + 41\n
-20 LET B = 9 * 2\n
+10 LET A = 8* 9 + 41\n
+20 LET B = 9* 2\n
 30 print b\n
 40 print a\n
 50 print b\n

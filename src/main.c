@@ -4,6 +4,7 @@
 TAC_Entry * TacArr;
 unsigned int TacInd = 0;
 STACK *goto_s;
+STACK_STR *float_inits;
 
 int main(int argc, char  *argv[])
 {
@@ -51,6 +52,7 @@ int main(int argc, char  *argv[])
     }
     introduce_s_table();
     goto_s = init_stack(0);
+    float_inits = init_stack_str(0);
     int loop = true;
     statements = (AST**)malloc(sizeof(AST*) * STATEMENTS_SIZE);
     for (int  i = 0; i < STATEMENTS_SIZE; i++)
@@ -61,6 +63,7 @@ int main(int argc, char  *argv[])
     while (true)
     {
         loop = LineToTokens(src);
+        TokensToLinePrint();
         if (loop == 2) continue;
         else if (loop == 0) break;
         statements[i] = parse_AST();
@@ -87,6 +90,7 @@ int main(int argc, char  *argv[])
     free(tar_path_name);
     free(marked);
     free(goto_s);
+    free(float_inits);
     freeTokensArr();
     free_s_table();
     free_nfa();

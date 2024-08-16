@@ -60,6 +60,7 @@ typedef struct tacentry{
     three-address code
 */
 typedef struct tac{
+    bool is_float;
     unsigned int len;
     TAC_Entry * arr;
     short LiveInterval[LIVE_INTER_LEN][2];
@@ -89,9 +90,9 @@ typedef struct exp
     } tag;  
     union
     {   
-        int symbol;
+        unsigned int symbol;
         int intExp;
-        char floatExp[AST_STR_LEN];
+        unsigned int floatExp; //id
         char strExp[AST_STR_LEN];
         char varExp[AST_STR_LEN];
         struct {
@@ -156,6 +157,7 @@ TAC * ASTtoTAC(AST * node);
 int postfix_GetIndex(char * str);
 bool isSymbolVar(Atom atom);
 bool isTempVar(Atom atom);
+bool isFloatVar(Atom atom);
 AST *bsearch_statements(AST **stmts, int len, int tar_numline);
 
 

@@ -34,6 +34,8 @@ static AST * iter_parse_exp(int min_prec);
 static AST * recursive_parse_exp(AST * left, int min_prec);
 static bool getLastChar(Atom atom, char c);
 
+bool float_flag;
+
 static void print_op(int op) {
     switch (op)
     {
@@ -137,6 +139,7 @@ void printAST(AST * ast) {
         break;
     case tag_symbol:
         printf("<id: %d>", ast->oper.symbol);
+        break;
     case tag_var:
         printf("%s",ast->oper.varExp);
         break;
@@ -147,7 +150,7 @@ void printAST(AST * ast) {
         printf("%s", ast->oper.strExp);
         break;
     case tag_float:
-        printf("%s", ast->oper.floatExp);
+        printf("{float_id: %d}", ast->oper.floatExp);
         break;
     case tag_common_statement:
         print_stmt(ast->oper.commonExp.stmt);
@@ -519,12 +522,9 @@ static AST * parse_AssignExp() {
         value = NULL;
     } else {
         get_next_token();
-        if (isINT(cur_token())) {
-            value = parse_arith_expression();
-        } else if (isSTRING(cur_token())) {
-            value = parse_StrExp(); // ???
-        }
-        
+        char *t = cur_token();
+        assert(isINT(t) | isFLOAT(t));
+        value = parse_arith_expression();       
     }
     node->oper.assignExp.identifier = identifier;
     node->oper.assignExp.value = value;
@@ -551,9 +551,11 @@ static AST * parse_VarExp() {
     return node;
 }
 static AST * parse_FloatExp() {
+    static int id = 0;
     AST * node = AllocNode();
     node->tag = tag_float;
-    strcpy(node->oper.floatExp, cur_token());
+    node->oper.floatExp = id++;
+    push_str_s(float_inits, cur_token());
     return node;
 }
 
@@ -669,7 +671,9 @@ bool isSymbolVar(Atom atom) {
 bool isTempVar(Atom atom) {
     return getLastChar(atom, 't');
 }
-
+bool isFloatVar(Atom atom) {
+    return getLastChar(atom, 'f');
+}
 
 
 int postfix_GetIndex(char * str) { 
@@ -700,8 +704,10 @@ static void FillLiveArr(TAC * tac) {
 
 static AST * parse_arith_expression() {
     if (ParenthesisLvl) parse_syntax_error("non-closed parethesis");
+    float_flag = false;
     AST * ast = iter_parse_exp(-1);
     TAC * tac = ASTtoTAC(ast);
+    
 
     AST* exp = (AST*) malloc(sizeof(AST));
     exp->tag = tag_arith;
@@ -722,6 +728,8 @@ static char * FillTac(AST * ast, TAC * tac, int * ind) {
         if (asts[i]->tag == tag_binary) temp[i] = FillTac(asts[i], tac, ind);
       
         if (temp[i]) strcpy(args[i].c, temp[i]);
+        else if (asts[i]->tag == tag_float)
+            sprintf(args[i].c, "%df", asts[i]->oper.symbol); // f for float
         else if (asts[i]->tag == tag_symbol) 
             sprintf(args[i].c, "%ds", asts[i]->oper.symbol); // s for symbol     
         else args[i].i = asts[i]->oper.intExp;
@@ -736,6 +744,7 @@ static char * FillTac(AST * ast, TAC * tac, int * ind) {
 
 TAC * ASTtoTAC(AST * node) {
     TAC * tac = (TAC*) malloc(sizeof(TAC));
+    tac->is_float = false;
     for (int i = 0; i < LIVE_INTER_LEN; i++)
     {
         for (int j = 0; j < 2; j++)
@@ -744,13 +753,23 @@ TAC * ASTtoTAC(AST * node) {
         }
             
     }
-    if (node->tag != tag_binary) {    
+    /*
+      the following is just for one number....
+     */
+    if (node->tag != tag_binary) {
+        char temp[10];
         TAC_Entry * arr = (TAC_Entry *) malloc(sizeof(TAC_Entry));
-        arr->operator = op_null; // if null then use only arg1
+        
+        arr->operator = op_null; // if null then use only arg2
+        
         if (node->tag == tag_symbol) {
-            char temp[10];
             sprintf(temp, "%ds", node->oper.symbol);
             strcpy(arr->arg2.c, temp);
+        }
+        else if (node->tag == tag_float) {
+            sprintf(temp, "%df", node->oper.symbol);
+            strcpy(arr->arg2.c, temp);
+            tac->is_float = true;
         }
         else if (node->tag == tag_unary && node->oper.unaryExp.operator == op_minus) {
             arr->arg2.i = UINT_MAX - node->oper.unaryExp.operand->oper.intExp;

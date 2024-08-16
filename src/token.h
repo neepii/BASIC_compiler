@@ -1,9 +1,11 @@
+
 #ifndef TOKEN_H_
 #define TOKEN_H_
 #include <stdio.h>
 
 typedef enum wordtype {
-  WT_CHAR,
+  WT_LATIN,
+  WT_PUNCT,
   WT_OPER,
   WT_NUM,
   WT_ETC,
@@ -30,10 +32,15 @@ struct node {
 };
     
 typedef struct stack {
-    int last; //available
-    int arrlen;
+    unsigned int last;
+    unsigned int arrlen;
     int arr[1];
 } STACK;
+typedef struct stack_str {
+    unsigned int last; 
+    unsigned int arrlen;
+    char arr[1][20];
+} STACK_STR;
 
 typedef struct nfa {
     GRAPH * g;
@@ -56,6 +63,9 @@ bool isVAR(char * str);
 bool isINT(char *str);
 bool isFLOAT(char *str);
 bool isBINEXP(char *str);
+bool isCOMMON_FLOAT(char *str);
+bool isDOT_FLOAT(char *str);
+bool isSCIENTIFIC_FLOAT(char *str);
 bool isNUM(char c);
 void init_nfa();
 void free_nfa();
@@ -66,13 +76,19 @@ int pop_s(STACK * st);
 void push_s(STACK *st, int data);
 void clear_stack(STACK *s);
 int top_stack(STACK *s);
-bool stack_is_empty(STACK * st);
+bool stack_is_empty(STACK *st);
+bool stack_str_is_empty(STACK_STR *st);
+STACK_STR *init_stack_str(unsigned int len);
+void push_str_s(STACK_STR *st, char * str);
+void pop_str_s(STACK_STR *st, char addr[20]);
 extern bool *marked;
 extern NFA *nfaINTEGER;
 extern NFA *nfaSTRING;
 extern NFA *nfaCOMMON_FLOAT;
 extern NFA *nfaDOT_FLOAT;
 extern NFA *nfaSCIENTIFIC_FLOAT;
+extern NFA *nfaVARIABLE;
 extern STACK *goto_s;
+extern STACK_STR *float_inits;
 
 #endif
