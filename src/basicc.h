@@ -41,7 +41,11 @@
 #define GREATER_H 62
 #define GR_EQ_H 123
 #define LS_EQ_H 121
-#define NEQUAL_H 122 // <> and >< (perfect collision :D )
+#define NEQUAL_H 122
+#define NOT_H 241
+#define OR_H 161
+#define AND_H 211
+
 
 #define MAX_TOKENS_IN_LINE 20
 #define TOKEN_LEN 20

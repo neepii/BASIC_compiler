@@ -333,22 +333,26 @@ char * put_tac(int num, TAC* tac, int *regArr) {
         str[1] = str[0];
         str[0] = temp_p;
     }
-
+    char * instr;
     switch (tac->arr[num].operator)
     {
     case op_null:
         break;
     case op_plus:
-        put("add %s, %s", str[0], str[1]);
-        break;
+        instr = (tac->is_float) ? "fiadd" : "add";
+        put("%s %s, %s",instr,  str[0], str[1]);
+        break;    
     case op_minus:
-        put("sub %s, %s", str[0], str[1]);
+        instr = (tac->is_float) ? "fisub" : "sub";
+        put("sub %s, %s",instr, str[0], str[1]);
         break;
     case op_mul:
-        handle_one_arg_op(regArr, args, str, "mul", tac);
+        instr = (tac->is_float) ? "fimul" : "mul";
+        handle_one_arg_op(regArr, args, str, instr, tac);
         break;
     case op_div:
-        handle_one_arg_op(regArr, args, str, "div", tac);
+        instr = (tac->is_float) ? "fidiv" : "div";
+        handle_one_arg_op(regArr, args, str, instr, tac);
         break;
     case op_equal:
         handle_cmp_op(regArr, args, str, "sete", tac);
@@ -367,6 +371,12 @@ char * put_tac(int num, TAC* tac, int *regArr) {
         break;
     case op_not_eq:
         handle_cmp_op(regArr, args, str, "setne",tac);
+        break;
+    case op_or:
+        put("or %s, %s",  str[0], str[1]);
+        break;
+    case op_and:
+        put("and %s, %s",  str[0], str[1]);
         break;
     default:
         break;

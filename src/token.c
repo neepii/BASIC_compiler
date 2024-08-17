@@ -383,7 +383,9 @@ bool isBINEXP(char * str) {
         ">",
         "<",
         "<=",
-        ">="
+        ">=",
+        "AND",
+        "OR"
     };
     int len = sizeof(BinOpers) / sizeof(*BinOpers);
     for (int i = 0; i < len; i++)

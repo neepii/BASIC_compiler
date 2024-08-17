@@ -46,6 +46,9 @@ enum operator {
     op_greater_eq,  // ">="
     op_equal,       // "="  
     op_not_eq,      // "<>" "><"
+    op_not,
+    op_and,
+    op_or,
     op_null
 };
 

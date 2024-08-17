@@ -69,6 +69,15 @@ static void print_op(int op) {
     case op_not_eq:
         printf("><");
         break;
+    case op_not:
+        printf("NOT");
+        break;
+    case op_and:
+        printf("AND");
+        break;
+    case op_or:
+        printf("OR");
+        break;
     default:
         break;
     }
@@ -452,6 +461,9 @@ static int get_op(char * str) {
     case GR_EQ_H: return op_greater_eq;
     case EQUAL_H: return op_equal;
     case NEQUAL_H: return op_not_eq;
+    case NOT_H: return op_not;
+    case AND_H: return op_and;
+    case OR_H: return op_or;
     default: return -1;
     }
 }
@@ -578,9 +590,11 @@ static AST * parse_leaf() {
 
 static int get_predecense(char * s_op) {
     int op = get_op(s_op);
-    if (op >= 4 && op <= 7)  return 1;
-    else if (op >= 0 && op <= 1) return 2; // "+" "-"
-    else if(op >= 2 && op <= 3) return 3; // "*" "/"
+    if (op <= op_or) return 1;                                       // "OR"
+    else if (op <= op_and) return 2;                                 // "AND"
+    else if (op >= op_less && op <= op_not_eq)  return 3;            // "<" ">" "<=" ">=" "=" "<>"
+    else if (op == op_plus || op == op_plus) return 4;               // "+" "-"
+    else if (op == op_mul || op == op_div) return 5;                 // "*" "/" 
     else return 0;
 }
 

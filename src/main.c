@@ -63,7 +63,6 @@ int main(int argc, char  *argv[])
     while (true)
     {
         loop = LineToTokens(src);
-        TokensToLinePrint();
         if (loop == 2) continue;
         else if (loop == 0) break;
         statements[i] = parse_AST();
