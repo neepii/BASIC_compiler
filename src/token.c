@@ -48,7 +48,7 @@ void init_nfa() {
     nfaCOMMON_FLOAT = createNFA("(+|-)?[0-9][0-9]*.[0-9][0-9]*");
     nfaDOT_FLOAT = createNFA("(+|-)?.[0-9][0-9]*");
     nfaSCIENTIFIC_FLOAT = createNFA("(+|-)?[0-9][0-9]*.[0-9][0-9]*(e|E)(+|-)?[0-9][0-9]*");
-    nfaVARIABLE = createNFA("[A-Z][A-Z]*");
+    nfaVARIABLE = createNFA("([A-Z]|[a-z])([A-Z]|[a-z]|[0-9])*");
 }
 
 void free_nfa() {
@@ -174,18 +174,30 @@ static NFA * createNFA(char * re) {
     strncpy(regex, re, M);
     GRAPH * G = init_graph(M+1);
     STACK * ops = init_stack(0);
+    STACK * ors = init_stack(0);
     for (int i = 0 ; i < M; i++) {
         int lp = i;
         if (re[i] == '(' || re[i] == '|' || re[i] == '[') {
             push_s(ops, i);
         }
         else if(re[i] == ')') {
-            int or = pop_s(ops);
-            if (re[or] == '|') {
-                lp = pop_s(ops);
-                add_edge_graph(G, lp, or+1);
-                add_edge_graph(G, or, i);
+            int or = top_stack(ops);
+            bool OrPresence = false;
+            while (re[or] == '|') {
+                push_s(ors, pop_s(ops));     
+                or = top_stack(ops);     
+                OrPresence = true;
             }
+            if (OrPresence) {
+                lp = pop_s(ops);
+                assert(re[lp] == '(');
+                do {
+                    or = pop_s(ors);
+                    add_edge_graph(G, lp, or +1);
+                    add_edge_graph(G, or, i);
+                } while (!stack_is_empty(ors));
+            }
+            
             else lp = or;
         }
         else if (re[i] == ']') {
@@ -242,8 +254,8 @@ static void DEPTH_FIRST(STACK* eps, GRAPH * g, int v) {
 }
 static bool recognizes_nfa(NFA *nfa, char *str) {
     STACK* dfs = init_stack(0);
-    STACK * pc = init_stack(10);
-    STACK* aux = init_stack(10);
+    STACK * pc = init_stack(0);
+    STACK* aux = init_stack(0);
     DEPTH_FIRST(dfs,nfa->g, 0);
     int len = strlen(str);
     
