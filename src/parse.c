@@ -742,8 +742,10 @@ static char * FillTac(AST * ast, TAC * tac, int * ind) {
         if (asts[i]->tag == tag_binary) temp[i] = FillTac(asts[i], tac, ind);
       
         if (temp[i]) strcpy(args[i].c, temp[i]);
-        else if (asts[i]->tag == tag_float)
+        else if (asts[i]->tag == tag_float) {
+            tac->is_float = true;
             sprintf(args[i].c, "%df", asts[i]->oper.symbol); // f for float
+        }
         else if (asts[i]->tag == tag_symbol) 
             sprintf(args[i].c, "%ds", asts[i]->oper.symbol); // s for symbol     
         else args[i].i = asts[i]->oper.intExp;
@@ -838,6 +840,7 @@ AST * parse_AST() { // lvl starts with 0
     case CLS_H: return parse_ClsStatementExp();
     case DEC_H: return parse_DecStatementExp();
     case INC_H: return parse_IncStatementExp();
+
     default: {
         AST * let = AllocNode();
         let->tag = tag_common_statement;

@@ -7,3 +7,4 @@ exec
 *.bas
 listofkeywords.txt
 a.out
+*.gdb

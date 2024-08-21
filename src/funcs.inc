@@ -1,3 +1,54 @@
+
+#xmm0 - 64bit float
+#rax - buffer for string
+#rcx - precision
+#uses rax rbx rcx rdx rdi xmm0 xmm1 xmm2
+ftoa:
+    mov %rax, %rbx
+    pxor %xmm1, %xmm1
+    ucomisd %xmm0, %xmm1
+    jl .is_negative
+    jg .ftoa_convert
+    movb $48, (%rdi)
+    inc %eax
+    movb $0, (%rdi)
+    jmp .ftoa_end
+
+.is_negative:
+    movb $45, (%rax)
+    inc %eax
+
+.ftoa_convert:
+    cvttsd2si %xmm0, %rdi
+    cvtsi2sdq %rdi, %xmm1
+    subsd %xmm1, %xmm0 #; xmm1 - int ; xmm0 - mantissa
+    mov %rcx, %r9
+    call itoa
+    mov %r9, %rcx
+    add %rax, %rbx
+    movb $46, (%rbx)
+    inc %eax
+    inc %ebx
+    pxor %xmm2, %xmm2
+.ftoa_loop:
+    ucomisd %xmm0, %xmm2
+    je .ftoa_end
+    mulsd (ten_f), %xmm0
+    cvttsd2si %xmm0, %rdx
+    cvtsi2sdq %rdx, %xmm1
+    subsd %xmm1, %xmm0
+    add $48, %rdx
+    movb %dl, (%rbx)
+    inc %ebx
+    inc %eax    
+    loop .ftoa_loop
+    movb $0, (%rbx)
+    inc %ebx
+    inc %eax
+.ftoa_end:
+    ret
+
+
 # rdi - string buffer
 # uses rax rsi r10
 atoi:
@@ -81,7 +132,7 @@ itoa:
  	jnz itoa_convert_reg
 	movb $48, (%rsi)
 	inc %esi
-	movb $0, (%rsi)
+    movb $0, (%rsi)
 	mov $1, %rax
 	jmp itoa_end
 	

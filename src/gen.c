@@ -1,3 +1,4 @@
+
 #include "basicc.h"
 FILE * tar;
 unsigned int stackpos = 0;
@@ -66,18 +67,13 @@ static void check_stack(unsigned int ind) {
         exit(1);
     }
 }
-
-
-static void data_section() {
-    int ind = 0;
-    put(".lcomm digitspace, 16");
-    put(".lcomm bytestorage, 1");
-    put(".lcomm stringspace, 32");
+static void rodata_section() {
     put_notab("clear_escape_seq: .asciz \"\\033[2J\\033[H\"");
+    put_notab("ten_f: .double 10.0");
     for (int i = 0; i < S_TABLE_SIZE; i++) //maybe replace it with popstack loop
     {
         if (S_TABLE->inds[i] == -1) break;   
-        ind = S_TABLE->inds[i];
+        int ind = S_TABLE->inds[i];
         LL_NODE ** list = &S_TABLE->list[ind];
         
         while ((*list)->id != i) list = &S_TABLE->list[ind]->next;
@@ -88,11 +84,20 @@ static void data_section() {
     for (int i = 0; i < float_inits->last; i++) {
         char * fl = float_inits->arr[i];
         if (isDOT_FLOAT(fl)) {
-            put_notab("float%d: .float 0%s", i , fl);
+            put_notab("float%d: .double 0%s", i , fl);
         } else {
-            put_notab("float%d: .float %s", i , fl);
+            put_notab("float%d: .double %s", i , fl);
         }
     }
+    
+}    
+
+static void data_section() {
+
+    put(".lcomm bytestorage, 1");    
+    put(".lcomm digitspace, 16");
+    put(".lcomm stringspace, 32");
+    put(".lcomm floatspace, 64");
 }
 
 
@@ -319,10 +324,10 @@ char * put_tac(int num, TAC* tac, int *regArr) {
     if (!(isTempVar(args[0]) || isTempVar(args[1])) ) {
         new_ind = requestReg(args[1].c, regArr, tac);
         char * reg_temp = getReg(new_ind);
-	    if (RegIsNotCleared[new_ind]) put("xor %s, %s", reg_temp, reg_temp);
+
 	    RegIsNotCleared[new_ind] = true;
         
-        if (tac->is_float) put("movss %s, %s",str[1], reg_temp);
+        if (tac->is_float) put("movsd %s, %s",str[1], reg_temp);
         else put("mov %s, %s",str[1], reg_temp);
         
         strcpy(args[1].c, reg_temp);
@@ -339,19 +344,19 @@ char * put_tac(int num, TAC* tac, int *regArr) {
     case op_null:
         break;
     case op_plus:
-        instr = (tac->is_float) ? "fiadd" : "add";
+        instr = (tac->is_float) ? "addsd" : "add";
         put("%s %s, %s",instr,  str[0], str[1]);
         break;    
     case op_minus:
-        instr = (tac->is_float) ? "fisub" : "sub";
+        instr = (tac->is_float) ? "subsd" : "sub";
         put("sub %s, %s",instr, str[0], str[1]);
         break;
     case op_mul:
-        instr = (tac->is_float) ? "fimul" : "mul";
+        instr = (tac->is_float) ? "mulsd" : "mul";
         handle_one_arg_op(regArr, args, str, instr, tac);
         break;
     case op_div:
-        instr = (tac->is_float) ? "fidiv" : "div";
+        instr = (tac->is_float) ? "divsd" : "div";
         handle_one_arg_op(regArr, args, str, instr, tac);
         break;
     case op_equal:
@@ -454,7 +459,7 @@ static void check_addr(int *addr, int sym) {
         insert_hashmap_addr(S_TABLE, *addr, sym);
     }
 }
-static void handle_var_ascii(char * str, AST * arg) {
+static void handle_var_ascii(char *str, AST *arg) {
     int addr = getAddrByID(arg->oper.symbol, S_TABLE);
     check_addr(&addr, arg->oper.symbol);
     sprintf(str, "-%d(%%rbp)", addr);
@@ -473,10 +478,18 @@ void handle_common_statements(AST * node) {
         char str[64] = {0};
         char len[25] = {0};
         if (arg->tag != tag_symbol && arg->tag != tag_assign) { //my god what have i done
-            char * reg = eval_arith_exp(arg);
+            char *reg = eval_arith_exp(arg);
+            assert(arg->tag == tag_arith);
+            if (arg->oper.arithExp.lowlvl->is_float) {
+                put("mov %s, %%rax", "$digitspace");
+                put("mov $8, %rcx");
+                call("ftoa");
+                put("mov %%rax, %rdx");
+                multi_mov(REG_AX | REG_SI | REG_DI, "$1", "$digitspace", "$1");                
+            } else {
             if (match(reg, "%rax") ) {
                 put("mov %%rax, %%rdi");
-                put("mov %s, %%rax", "$digitspace");
+                put("mov %s, %%rax", "$digitspace"); 
             } else {
                 put("mov $digitspace, %%rax");
                 put("mov %s, %%rdi", reg);
@@ -484,6 +497,7 @@ void handle_common_statements(AST * node) {
             call("itoa");
             put("mov %%rax, %%rdx");
             multi_mov(REG_AX | REG_SI | REG_DI, "$1", "$digitspace", "$1");
+            }
         } else { //is symbol
             int ind = getIndexBySymbol(arg);
             switch (S_TABLE->list[ind]->type) {
@@ -546,7 +560,7 @@ void handle_common_statements(AST * node) {
             put("movl %s, -%d(%%rbp)",x86,addr);
         } else {
             put("sub $4, %rsp");
-            put("movss %s, -%d(%%rbp)", value, addr);
+            put("movsd %s, -%d(%%rbp)", value, addr);
         }
 
 
@@ -695,8 +709,10 @@ void make_target_src() {
 
     tar = fopen(tar_path_name, "w"); 
     put(".code64");
-    put_notab(".section .data"); 
+    put_notab(".section .data");
     data_section();
+    put_notab(".section .rodata");
+    rodata_section();    
     put_notab(".global _start"); 
     put_notab(".section .text");
     include("src/funcs.inc");

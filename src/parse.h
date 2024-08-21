@@ -16,6 +16,7 @@ typedef union atom {
 
 enum statement {
     op_print,
+    op_cprintf,
     op_input,
     op_let,
     op_rem,
